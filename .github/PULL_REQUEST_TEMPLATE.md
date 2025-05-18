@@ -11,7 +11,7 @@
 関連するIssueのリンクをこちらに記載してください
 
 # CLAへの同意
-- 本リポジトリへのコントリビュートには、[コントリビューターライセンス契約（CLA）](https://github.com/digitaldemocracy2030/kouchou-ai/blob/main/CLA.md)に同意することが必須です。
+- 本リポジトリへのコントリビュートには、[コントリビューターライセンス契約（CLA）](https://github.com/team-mirai/random/blob/main/CLA.md)に同意することが必須です。
 内容をお読みいただき、下記のチェックボックスにチェックをつける（"- [ ]" を "- [x]" に書き換える）ことで同意したものとみなします。
 
 - [ ] CLAの内容を読み、同意しました

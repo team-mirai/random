@@ -18,4 +18,4 @@ assignees: ""
 
 
 # 実験結果について（実験を実施される方向け）
-* 実験結果はこちらの[Google Docs](https://docs.google.com/document/d/1GK4Arh8ZyJmQjQ4iW1CRMruEUPicKAAUZEZi2TpAo4w/edit?tab=t.0#heading=h.j72jxw32gila)に記載してください
+* 実験結果の詳細を記載してください

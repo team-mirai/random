@@ -8,11 +8,10 @@
   "files": {
     "ignoreUnknown": false,
     "ignore": [
-      "server",
-      ".next",
+      ".git",
       "node_modules",
-      "out",
-      "hierarchical_result.json"
+      "dist",
+      "build"
     ]
   },
   "formatter": {

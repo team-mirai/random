@@ -4,13 +4,13 @@ on:
   push:
     branches: [main]
     paths:
-      - "server/**/*.py"
-      - "server/pyproject.toml"
+      - "**/*.py"
+      - "pyproject.toml"
   pull_request:
     branches: [main]
     paths:
-      - "server/**/*.py"
-      - "server/pyproject.toml"
+      - "**/*.py"
+      - "pyproject.toml"
 
 jobs:
   ruff:
