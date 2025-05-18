@@ -23,9 +23,7 @@ def get_github_token():
         try:
             import subprocess
 
-            result = subprocess.run(
-                ["gh", "auth", "token"], capture_output=True, text=True
-            )
+            result = subprocess.run(["gh", "auth", "token"], capture_output=True, text=True)
             if result.returncode == 0:
                 token = result.stdout.strip()
         except Exception as e:
@@ -58,9 +56,7 @@ def check_rate_limit():
     now = datetime.datetime.now()
 
     print(f"API制限: 残り {remaining} リクエスト")
-    print(
-        f"制限リセット時間: {reset_time} (あと {(reset_time - now).total_seconds() / 60:.1f} 分)"
-    )
+    print(f"制限リセット時間: {reset_time} (あと {(reset_time - now).total_seconds() / 60:.1f} 分)")
 
     return remaining, reset_time
 
@@ -243,9 +239,7 @@ def generate_markdown(prs_data, filename):
             f.write(f"- **作成者**: {user}\n")
             f.write(f"- **作成日時**: {created_at}\n")
             f.write(f"- **更新日時**: {updated_at}\n")
-            f.write(
-                f"- **ブランチ**: {basic['head']['ref']} → {basic['base']['ref']}\n"
-            )
+            f.write(f"- **ブランチ**: {basic['head']['ref']} → {basic['base']['ref']}\n")
 
             if basic["body"]:
                 f.write(f"\n#### 説明\n\n{basic['body']}\n\n")
@@ -256,17 +250,13 @@ def generate_markdown(prs_data, filename):
                 f.write("#### 変更ファイル\n\n")
                 for file in pr["files"]:
                     f.write(f"- [{file['filename']}]({file['blob_url']}) ")
-                    f.write(
-                        f"(追加: {file.get('additions', 0)}, 削除: {file.get('deletions', 0)})\n"
-                    )
+                    f.write(f"(追加: {file.get('additions', 0)}, 削除: {file.get('deletions', 0)})\n")
 
             if "commits" in pr and pr["commits"]:
                 f.write(f"\n#### コミット ({len(pr['commits'])}件)\n\n")
                 for commit in pr["commits"]:
                     commit_msg = commit["commit"]["message"].split("\n")[0]  # 1行目だけ
-                    author = (
-                        commit["author"]["login"] if commit["author"] else "Unknown"
-                    )
+                    author = commit["author"]["login"] if commit["author"] else "Unknown"
                     f.write(f"- [{commit_msg}]({commit['html_url']}) by {author}\n")
 
             if "comments" in pr and pr["comments"]:
@@ -285,9 +275,7 @@ def generate_markdown(prs_data, filename):
                     body = comment["body"]
                     path = comment["path"]
                     position = comment.get("position", "N/A")
-                    f.write(
-                        f"**{user}** ({date}) on `{path}` at position {position}:\n\n{body}\n\n---\n\n"
-                    )
+                    f.write(f"**{user}** ({date}) on `{path}` at position {position}:\n\n{body}\n\n---\n\n")
 
             f.write("\n---\n\n")  # PRの区切り
 
@@ -306,11 +294,7 @@ def generate_summary_markdown(prs_data, filename):
         f.write("## オープンなPull Requestの統計\n\n")
         f.write(f"合計: {len(valid_prs)}件のオープンPR\n\n")
 
-        non_bot_prs = [
-            pr
-            for pr in valid_prs
-            if not pr["basic_info"]["user"]["login"].endswith("[bot]")
-        ]
+        non_bot_prs = [pr for pr in valid_prs if not pr["basic_info"]["user"]["login"].endswith("[bot]")]
 
         f.write("## bot経由でないPR一覧\n\n")
         if non_bot_prs:
@@ -325,9 +309,7 @@ def generate_summary_markdown(prs_data, filename):
                 created_at = basic["created_at"].split("T")[0]
                 updated_at = basic["updated_at"].split("T")[0]
 
-                f.write(
-                    f"| #{pr_number} | [{title}]({basic['html_url']}) | {user} | {created_at} | {updated_at} |\n"
-                )
+                f.write(f"| #{pr_number} | [{title}]({basic['html_url']}) | {user} | {created_at} | {updated_at} |\n")
         else:
             f.write("bot経由でないPRはありません。\n\n")
 
@@ -348,9 +330,7 @@ def generate_summary_markdown(prs_data, filename):
                 f.write("| # | タイトル | 作成者 | 作成日 | 更新日 |\n")
                 f.write("|---|---------|--------|--------|--------|\n")
 
-                for pr in sorted(
-                    prs, key=lambda x: x["basic_info"]["created_at"], reverse=True
-                ):
+                for pr in sorted(prs, key=lambda x: x["basic_info"]["created_at"], reverse=True):
                     basic = pr["basic_info"]
                     pr_number = basic["number"]
                     title = basic["title"]
@@ -376,21 +356,11 @@ def parse_arguments():
         default=0,
         help="取得するPRの最大数 (デフォルト: 全て)",
     )
-    parser.add_argument(
-        "--workers", type=int, default=10, help="並列処理のワーカー数 (デフォルト: 10)"
-    )
-    parser.add_argument(
-        "--no-comments", action="store_true", help="コメントを取得しない"
-    )
-    parser.add_argument(
-        "--no-review-comments", action="store_true", help="レビューコメントを取得しない"
-    )
-    parser.add_argument(
-        "--no-commits", action="store_true", help="コミット情報を取得しない"
-    )
-    parser.add_argument(
-        "--no-files", action="store_true", help="変更ファイル情報を取得しない"
-    )
+    parser.add_argument("--workers", type=int, default=10, help="並列処理のワーカー数 (デフォルト: 10)")
+    parser.add_argument("--no-comments", action="store_true", help="コメントを取得しない")
+    parser.add_argument("--no-review-comments", action="store_true", help="レビューコメントを取得しない")
+    parser.add_argument("--no-commits", action="store_true", help="コミット情報を取得しない")
+    parser.add_argument("--no-files", action="store_true", help="変更ファイル情報を取得しない")
     parser.add_argument(
         "--output-dir",
         type=str,
@@ -406,14 +376,10 @@ def generate_issues_and_diffs_markdown(prs_data, filename):
     now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     valid_prs = [pr for pr in prs_data if pr]  # Noneを除外
-    sorted_prs = sorted(
-        valid_prs, key=lambda x: x["basic_info"]["created_at"], reverse=True
-    )
+    sorted_prs = sorted(valid_prs, key=lambda x: x["basic_info"]["created_at"], reverse=True)
 
     with open(filename, "w", encoding="utf-8") as f:
-        f.write(
-            "# team-mirai/policy リポジトリのPull Request - Issues内容と変更差分\n\n"
-        )
+        f.write("# team-mirai/policy リポジトリのPull Request - Issues内容と変更差分\n\n")
         f.write(f"生成日時: {now}\n\n")
         f.write("## 全PRのIssues内容と変更差分\n\n")
 
@@ -428,9 +394,7 @@ def generate_issues_and_diffs_markdown(prs_data, filename):
             f.write(f"- **URL**: {basic['html_url']}\n")
             f.write(f"- **作成者**: {user}\n")
             f.write(f"- **作成日時**: {created_at}\n")
-            f.write(
-                f"- **ブランチ**: {basic['head']['ref']} → {basic['base']['ref']}\n\n"
-            )
+            f.write(f"- **ブランチ**: {basic['head']['ref']} → {basic['base']['ref']}\n\n")
 
             if basic["body"]:
                 f.write(f"#### Issue内容\n\n{basic['body']}\n\n")
@@ -446,9 +410,7 @@ def generate_issues_and_diffs_markdown(prs_data, filename):
                     additions = file.get("additions", 0)
                     deletions = file.get("deletions", 0)
 
-                    f.write(
-                        f"##### {filename} ({status}, +{additions}/-{deletions})\n\n"
-                    )
+                    f.write(f"##### {filename} ({status}, +{additions}/-{deletions})\n\n")
 
                     if "patch" in file:
                         f.write("```diff\n")
@@ -492,9 +454,7 @@ def generate_file_based_markdown(prs_data, output_dir):
             file_md_path = files_dir / f"{safe_filename}.md"
 
             pr_count = len(pr_files)
-            index_f.write(
-                f"- [{filename}]({file_md_path.relative_to(output_dir)}) ({pr_count}件のPR)\n"
-            )
+            index_f.write(f"- [{filename}]({file_md_path.relative_to(output_dir)}) ({pr_count}件のPR)\n")
 
             with open(file_md_path, "w", encoding="utf-8") as f:
                 f.write(f"# {filename} に関するPull Request\n\n")
@@ -504,9 +464,7 @@ def generate_file_based_markdown(prs_data, output_dir):
                 f.write("| # | タイトル | 作成者 | 作成日 | 状態 | 変更 |\n")
                 f.write("|---|---------|--------|--------|------|------|\n")
 
-                for pr_data, file_data in sorted(
-                    pr_files, key=lambda x: x[0]["basic_info"]["number"]
-                ):
+                for pr_data, file_data in sorted(pr_files, key=lambda x: x[0]["basic_info"]["number"]):
                     basic = pr_data["basic_info"]
                     pr_number = basic["number"]
                     title = basic["title"]
@@ -521,9 +479,7 @@ def generate_file_based_markdown(prs_data, output_dir):
 
                 f.write("\n## 各Pull Requestの詳細\n\n")
 
-                for pr_data, file_data in sorted(
-                    pr_files, key=lambda x: x[0]["basic_info"]["number"]
-                ):
+                for pr_data, file_data in sorted(pr_files, key=lambda x: x[0]["basic_info"]["number"]):
                     basic = pr_data["basic_info"]
                     pr_number = basic["number"]
                     title = basic["title"]
@@ -534,9 +490,7 @@ def generate_file_based_markdown(prs_data, output_dir):
                     f.write(f"- **URL**: {basic['html_url']}\n")
                     f.write(f"- **作成者**: {user}\n")
                     f.write(f"- **作成日時**: {created_at}\n")
-                    f.write(
-                        f"- **ブランチ**: {basic['head']['ref']} → {basic['base']['ref']}\n\n"
-                    )
+                    f.write(f"- **ブランチ**: {basic['head']['ref']} → {basic['base']['ref']}\n\n")
 
                     if basic["body"]:
                         f.write(f"#### Issue内容\n\n{basic['body']}\n\n")
@@ -549,9 +503,7 @@ def generate_file_based_markdown(prs_data, output_dir):
                     additions = file_data.get("additions", 0)
                     deletions = file_data.get("deletions", 0)
 
-                    f.write(
-                        f"##### {filename} ({status}, +{additions}/-{deletions})\n\n"
-                    )
+                    f.write(f"##### {filename} ({status}, +{additions}/-{deletions})\n\n")
 
                     if "patch" in file_data:
                         f.write("```diff\n")
@@ -638,9 +590,7 @@ def main():
     print(f"詳細Markdown出力: {md_filename}")
     print(f"サマリーMarkdown出力: {summary_md_filename}")
     print(f"Issues内容と変更差分出力: {issues_diffs_md_filename}")
-    print(
-        f"ファイルごとのMarkdown出力: {output_dir / 'files'} (インデックス: {output_dir / 'files_index.md'})"
-    )
+    print(f"ファイルごとのMarkdown出力: {output_dir / 'files'} (インデックス: {output_dir / 'files_index.md'})")
 
 
 if __name__ == "__main__":
