@@ -299,9 +299,6 @@ def generate_summary_markdown(prs_data, filename):
     now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     valid_prs = [pr for pr in prs_data if pr]  # Noneを除外
-    sorted_prs = sorted(
-        valid_prs, key=lambda x: x["basic_info"]["created_at"], reverse=True
-    )
 
     with open(filename, "w", encoding="utf-8") as f:
         f.write("# team-mirai/policy リポジトリのPull Request概要\n\n")
