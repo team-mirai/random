@@ -1,0 +1,46 @@
+name: Ruff Check (Lint, Format, Type Hints)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "server/**/*.py"
+      - "server/pyproject.toml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "server/**/*.py"
+      - "server/pyproject.toml"
+
+jobs:
+  ruff:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: .
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff
+
+      - name: Run Ruff linter (including type hints)
+        run: |
+          echo "Running linter with all rules including type hints..."
+          ruff check .
+
+          echo "Showing type hint issues only (for reference)..."
+          ruff check . --select ANN --statistics || true
+
+      - name: Run Ruff formatter
+        run: |
+          ruff format . --diff
