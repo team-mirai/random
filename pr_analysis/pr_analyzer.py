@@ -8,6 +8,7 @@ import os
 import time
 from pathlib import Path
 
+import backoff
 import requests
 from tqdm import tqdm
 
@@ -42,6 +43,27 @@ def get_headers():
     return headers
 
 
+@backoff.on_exception(
+    backoff.expo,
+    (requests.exceptions.RequestException, requests.exceptions.HTTPError),
+    max_tries=5,  # 最大5回再試行
+    max_time=30,  # 最大30秒
+    giveup=lambda e: isinstance(e, requests.exceptions.HTTPError) and e.response.status_code in [401, 403, 404],  # 認証エラーやリソースが存在しない場合は再試行しない
+)
+def make_github_api_request(url, params=None, headers=None):
+    """GitHubのAPIリクエストを実行し、再試行ロジックを適用する"""
+    if headers is None:
+        headers = get_headers()
+    
+    response = requests.get(url, headers=headers, params=params)
+    response.raise_for_status()
+    return response.json()
+
+@backoff.on_exception(
+    backoff.expo,
+    requests.exceptions.RequestException,
+    max_tries=3,
+)
 def check_rate_limit():
     """GitHub APIのレート制限状況を確認する"""
     url = f"{API_BASE_URL}/rate_limit"
@@ -71,22 +93,23 @@ def get_open_pull_requests(limit=None):
         url = f"{API_BASE_URL}/repos/{REPO_OWNER}/{REPO_NAME}/pulls"
         params = {"state": "open", "per_page": per_page, "page": page}
 
-        response = requests.get(url, headers=get_headers(), params=params)
-        response.raise_for_status()
+        try:
+            prs = make_github_api_request(url, params=params)
+            if not prs:
+                break
 
-        prs = response.json()
-        if not prs:
+            all_prs.extend(prs)
+            page += 1
+
+            if limit and len(all_prs) >= limit:
+                all_prs = all_prs[:limit]
+                break
+
+            if page > 1:
+                time.sleep(0.5)  # APIレート制限を考慮して少し待機
+        except Exception as e:
+            print(f"PRリスト取得中にエラーが発生しました (ページ {page}): {e}")
             break
-
-        all_prs.extend(prs)
-        page += 1
-
-        if limit and len(all_prs) >= limit:
-            all_prs = all_prs[:limit]
-            break
-
-        if page > 1:
-            time.sleep(0.5)
 
     return all_prs
 
@@ -94,41 +117,31 @@ def get_open_pull_requests(limit=None):
 def get_pr_basic_info(pr_number):
     """PRの基本情報のみを取得する"""
     url = f"{API_BASE_URL}/repos/{REPO_OWNER}/{REPO_NAME}/pulls/{pr_number}"
-    response = requests.get(url, headers=get_headers())
-    response.raise_for_status()
-    return response.json()
+    return make_github_api_request(url)
 
 
 def get_pr_comments(pr_number):
     """PRのコメントを取得する"""
     url = f"{API_BASE_URL}/repos/{REPO_OWNER}/{REPO_NAME}/issues/{pr_number}/comments"
-    response = requests.get(url, headers=get_headers())
-    response.raise_for_status()
-    return response.json()
+    return make_github_api_request(url)
 
 
 def get_pr_review_comments(pr_number):
     """PRのレビューコメントを取得する"""
     url = f"{API_BASE_URL}/repos/{REPO_OWNER}/{REPO_NAME}/pulls/{pr_number}/comments"
-    response = requests.get(url, headers=get_headers())
-    response.raise_for_status()
-    return response.json()
+    return make_github_api_request(url)
 
 
 def get_pr_commits(pr_number):
     """PRのコミット情報を取得する"""
     url = f"{API_BASE_URL}/repos/{REPO_OWNER}/{REPO_NAME}/pulls/{pr_number}/commits"
-    response = requests.get(url, headers=get_headers())
-    response.raise_for_status()
-    return response.json()
+    return make_github_api_request(url)
 
 
 def get_pr_files(pr_number):
     """PRの変更ファイル情報を取得する"""
     url = f"{API_BASE_URL}/repos/{REPO_OWNER}/{REPO_NAME}/pulls/{pr_number}/files"
-    response = requests.get(url, headers=get_headers())
-    response.raise_for_status()
-    return response.json()
+    return make_github_api_request(url)
 
 
 def get_pr_details(
@@ -166,17 +179,21 @@ def process_pr(
     include_files=True,
 ):
     """1つのPRを処理する（並列処理用）"""
-    pr_number = pr["number"]
     try:
-        return get_pr_details(
-            pr_number,
-            include_comments=include_comments,
-            include_review_comments=include_review_comments,
-            include_commits=include_commits,
-            include_files=include_files,
-        )
+        pr_number = pr["number"]
+        try:
+            return get_pr_details(
+                pr_number,
+                include_comments=include_comments,
+                include_review_comments=include_review_comments,
+                include_commits=include_commits,
+                include_files=include_files,
+            )
+        except Exception as e:
+            print(f"PR #{pr_number} の処理中にエラーが発生しました: {str(e)[:200]}")
+            return None
     except Exception as e:
-        print(f"PR #{pr_number} の処理中にエラーが発生しました: {e}")
+        print(f"PRのbasic_info取得中にエラーが発生しました: {str(e)[:200]}")
         return None
 
 
@@ -549,7 +566,9 @@ def main():
 
     print(f"{args.workers}個のワーカーで並列処理を開始します...")
 
-    prs_data = []
+    valid_prs_data = []
+    error_prs = []
+    
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.workers) as executor:
         futures = [
             executor.submit(
@@ -569,21 +588,34 @@ def main():
             desc="PRの処理",
         ):
             result = future.result()
-            prs_data.append(result)
+            if result is not None:  # 有効なPRデータのみを追加
+                valid_prs_data.append(result)
+            else:
+                error_prs.append("不明なPR")  # PR番号が取得できない場合
+    
+    print(f"処理結果: 成功={len(valid_prs_data)}件, エラー={len(error_prs)}件")
+    
+    if error_prs:
+        print(f"注意: {len(error_prs)}件のPRでエラーが発生しました。これらはJSONに含まれません。")
+        error_log_path = output_dir / "error_prs.txt"
+        with open(error_log_path, "w", encoding="utf-8") as f:
+            for pr_info in error_prs:
+                f.write(f"{pr_info}\n")
+        print(f"エラーが発生したPRの情報を {error_log_path} に保存しました")
 
     json_filename = output_dir / "prs_data.json"
-    save_to_json(prs_data, json_filename)
+    save_to_json(valid_prs_data, json_filename)
 
     md_filename = output_dir / "prs_report.md"
-    generate_markdown(prs_data, md_filename)
+    generate_markdown(valid_prs_data, md_filename)
 
     summary_md_filename = output_dir / "prs_summary.md"
-    generate_summary_markdown(prs_data, summary_md_filename)
+    generate_summary_markdown(valid_prs_data, summary_md_filename)
 
     issues_diffs_md_filename = output_dir / "prs_issues_diffs.md"
-    generate_issues_and_diffs_markdown(prs_data, issues_diffs_md_filename)
+    generate_issues_and_diffs_markdown(valid_prs_data, issues_diffs_md_filename)
 
-    generate_file_based_markdown(prs_data, output_dir)
+    generate_file_based_markdown(valid_prs_data, output_dir)
 
     print("処理が完了しました。")
     print(f"JSON出力: {json_filename}")
