@@ -27,6 +27,7 @@ dependencies = [
     "azure-identity>=1.21.0",
     "sentence-transformers>=2.7.0",
     "hf_xet>=0.1.0",
+    "backoff>=2.2.1",
 ]
 readme = "README.md"
 requires-python = ">= 3.12"

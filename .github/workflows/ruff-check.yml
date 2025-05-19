@@ -28,7 +28,8 @@ jobs:
         with:
           # PR ブランチに直接 push できるようにする
           token: ${{ secrets.GITHUB_TOKEN }}
-          ref: ${{ github.head_ref }}
+          # forkからのPRでも動作するように修正
+          # ref: ${{ github.head_ref }}
           fetch-depth: 0
 
       - name: Set up Python
@@ -40,7 +41,7 @@ jobs:
       - name: Install Ruff
         run: |
           python -m pip install --upgrade pip
-          pip install ruff
+          pip install ruff backoff
 
       # ---------- pull_request 用：自動整形＆コミット ----------
       - name: Run Ruff formatter (auto-fix)
