@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 
-import json
 import csv
+import json
 import sys
-import os
 from pathlib import Path
 
 def convert_json_to_csv(json_file_path, output_csv_path=None):
@@ -27,7 +26,7 @@ def convert_json_to_csv(json_file_path, output_csv_path=None):
     
     try:
         # JSONファイルを読み込む
-        with open(json_file_path, 'r', encoding='utf-8') as f:
+        with open(json_file_path, encoding='utf-8') as f:
             data = json.load(f)
         
         # データが配列であることを確認
