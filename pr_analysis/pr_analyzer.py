@@ -48,16 +48,18 @@ def get_headers():
     (requests.exceptions.RequestException, requests.exceptions.HTTPError),
     max_tries=5,  # 最大5回再試行
     max_time=30,  # 最大30秒
-    giveup=lambda e: isinstance(e, requests.exceptions.HTTPError) and e.response.status_code in [401, 403, 404],  # 認証エラーやリソースが存在しない場合は再試行しない
+    giveup=lambda e: isinstance(e, requests.exceptions.HTTPError)
+    and e.response.status_code in [401, 403, 404],  # 認証エラーやリソースが存在しない場合は再試行しない
 )
 def make_github_api_request(url, params=None, headers=None):
     """GitHubのAPIリクエストを実行し、再試行ロジックを適用する"""
     if headers is None:
         headers = get_headers()
-    
+
     response = requests.get(url, headers=headers, params=params)
     response.raise_for_status()
     return response.json()
+
 
 @backoff.on_exception(
     backoff.expo,
@@ -568,7 +570,7 @@ def main():
 
     valid_prs_data = []
     error_prs = []
-    
+
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.workers) as executor:
         futures = [
             executor.submit(
@@ -592,9 +594,9 @@ def main():
                 valid_prs_data.append(result)
             else:
                 error_prs.append("不明なPR")  # PR番号が取得できない場合
-    
+
     print(f"処理結果: 成功={len(valid_prs_data)}件, エラー={len(error_prs)}件")
-    
+
     if error_prs:
         print(f"注意: {len(error_prs)}件のPRでエラーが発生しました。これらはJSONに含まれません。")
         error_log_path = output_dir / "error_prs.txt"
