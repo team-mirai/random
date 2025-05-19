@@ -5,6 +5,7 @@ import json
 import sys
 from pathlib import Path
 
+
 def convert_json_to_csv(json_file_path, output_csv_path=None):
     """
     JSONファイルからPRのIDとコメント（PR本文）を抽出し、CSVファイルに変換する
