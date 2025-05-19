@@ -59,7 +59,7 @@ jobs:
           fi
 
       - name: Commit formatted code
-        if: ${{ github.event_name == 'pull_request' && steps.fmt_changed.outputs.changed == 'true' }}
+        if: ${{ github.event_name == 'pull_request' && steps.fmt_changed.outputs.changed == 'true' && github.event.pull_request.head.repo.full_name == github.repository }}
         uses: EndBug/add-and-commit@v9
         with:
           message: "style: apply ruff format"
