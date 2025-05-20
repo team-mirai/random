@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 
-import os
-import requests
 import json
+import os
 from pathlib import Path
+
 import backoff
+import requests
+
 
 class ContentClassifier:
     """PRの内容を分析し、適切なカテゴリに分類するクラス"""
@@ -141,7 +143,7 @@ if __name__ == "__main__":
     parser.add_argument("--input", required=True, help="PRデータを含むJSONファイル")
     args = parser.parse_args()
     
-    with open(args.input, "r", encoding="utf-8") as f:
+    with open(args.input, encoding="utf-8") as f:
         pr_data = json.load(f)
     
     classifier = ContentClassifier()
