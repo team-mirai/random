@@ -169,6 +169,8 @@ def get_pull_requests_sequential(start_id=1, max_id=None, limit=None):
                 count += 1
             else:
                 print(f"PR #{current_id} は存在しないためスキップします")
+                print(f"PR #{current_id} が存在しないため、これ以上のPRは存在しないと判断して処理を終了します。")
+                break
             
             current_id += 1
             
