@@ -1,5 +1,5 @@
 # .github/workflows/ruff.yml
-name: Ruff Lint & Format
+name: Ruff Lint
 
 on:
   push:
@@ -17,8 +17,8 @@ jobs:
   ruff:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # 自動コミット用
-      pull-requests: write # PR への push 用
+      contents: read
+      pull-requests: read
     defaults:
       run:
         working-directory: .
@@ -26,10 +26,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          # PR ブランチに直接 push できるようにする
-          token: ${{ secrets.GITHUB_TOKEN }}
-          # forkからのPRでも動作するように修正
-          # ref: ${{ github.head_ref }}
           fetch-depth: 0
 
       - name: Set up Python
@@ -42,63 +38,6 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install ruff backoff
-
-      # ---------- pull_request 用：自動整形＆コミット ----------
-      - name: Run Ruff formatter (auto-fix)
-        if: ${{ github.event_name == 'pull_request' && github.actor != 'github-actions[bot]' }}
-        run: ruff format .
-
-      - name: Detect formatting changes
-        id: fmt_changed
-        if: ${{ github.event_name == 'pull_request' && github.actor != 'github-actions[bot]' }}
-        run: |
-          if git diff --quiet; then
-            echo "changed=false" >>"$GITHUB_OUTPUT"
-          else
-            echo "changed=true" >>"$GITHUB_OUTPUT"
-            # フォーマット変更の差分を保存
-            git diff > /tmp/format_changes.diff
-          fi
-
-      # 同一リポジトリからのPRの場合は自動コミット
-      - name: Commit formatted code
-        if: ${{ github.event_name == 'pull_request' && steps.fmt_changed.outputs.changed == 'true' && github.event.pull_request.head.repo.full_name == github.repository }}
-        uses: EndBug/add-and-commit@v9
-        with:
-          message: "style: apply ruff format"
-          add: "."
-          default_author: github_actions
-          
-      # フォークからのPRの場合はコメントで差分を通知
-      - name: Comment on PR with format changes
-        if: ${{ github.event_name == 'pull_request' && steps.fmt_changed.outputs.changed == 'true' && github.event.pull_request.head.repo.full_name != github.repository }}
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const fs = require('fs');
-            const diff = fs.readFileSync('/tmp/format_changes.diff', 'utf8');
-            
-            const body = `## Ruff フォーマット修正が必要です
-            
-            このPRには、Ruffフォーマッターによる修正が必要です。以下の変更を適用してください：
-            
-            \`\`\`diff
-            ${diff}
-            \`\`\`
-            
-            修正方法:
-            1. 上記の変更を手動で適用する
-            2. または \`ruff format .\` を実行して自動修正する
-            
-            変更を適用後、再度プッシュしてください。`;
-            
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: body
-            });
 
       # ---------- 共通：Lint と型ヒントチェック ----------
       - name: Ruff lint (all rules)
