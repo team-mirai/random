@@ -1,0 +1,4 @@
+tweepy>=4.10.0
+backoff>=2.0.0
+requests>=2.25.0
+tqdm>=4.60.0
