@@ -388,7 +388,7 @@ def load_last_run_info(base_output_dir):
     
     if last_run_file.exists():
         try:
-            with open(last_run_file, "r", encoding="utf-8") as f:
+            with open(last_run_file, encoding="utf-8") as f:
                 last_run_info = json.load(f)
             
             last_updated_at = datetime.datetime.fromisoformat(last_run_info["last_updated_at"])
@@ -413,7 +413,7 @@ def load_previous_prs_data(base_output_dir):
     
     if json_file.exists():
         try:
-            with open(json_file, "r", encoding="utf-8") as f:
+            with open(json_file, encoding="utf-8") as f:
                 prs_data = json.load(f)
             print(f"前回のPRデータを読み込みました: {len(prs_data)}件 ({json_file})")
             return prs_data
@@ -430,7 +430,7 @@ def load_pr_status_data(base_output_dir):
     
     if status_file.exists():
         try:
-            with open(status_file, "r", encoding="utf-8") as f:
+            with open(status_file, encoding="utf-8") as f:
                 status_data = json.load(f)
             print(f"PRの取得状況データを読み込みました: {len(status_data)}件のPR")
             return status_data
@@ -997,7 +997,7 @@ def generate_reports(args, json_path=None, output_dir=None, prs_data=None):
             json_path = args.input_json
         
         print(f"JSONファイル {json_path} からデータを読み込んでいます...")
-        with open(json_path, "r", encoding="utf-8") as f:
+        with open(json_path, encoding="utf-8") as f:
             prs_data = json.load(f)
         
         print(f"{len(prs_data)}件のPRデータを読み込みました")
