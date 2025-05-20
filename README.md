@@ -42,3 +42,15 @@ python pr_analysis/pr_analyzer.py --mode fetch --fetch-mode priority
 ```
 
 これにより、まだ取得できていないPRを優先的に取得し、残りの制限数で更新されたPRを取得します。
+
+### 新機能: README対象PRの分類
+
+READMEを対象とするPRを内容に基づいて分類することができます：
+
+```
+python pr_analysis/pr_analyzer.py --mode report --classify-readme --input-json pr_analysis/[timestamp]/prs_data.json
+```
+
+このコマンドを実行すると、READMEを対象とするPRが内容に基づいて既存のマークダウンファイルに分類され、結果が`classified`ディレクトリに保存されます。
+
+> **注**: この機能を使用するには、環境変数`OPENROUTER_API_KEY`にOpenRouter APIキーを設定する必要があります。
