@@ -152,6 +152,97 @@ def get_pull_requests(limit=None, sort_by="updated", direction="desc", last_upda
     return all_prs
 
 
+def get_pull_requests_sequential(start_id=1, max_id=None, limit=None):
+    """PR番号順にPRを取得する（ID1から順に）"""
+    all_prs = []
+    current_id = start_id
+    count = 0
+    
+    print(f"PR番号 #{start_id} から順にPRを取得します...")
+    
+    while True:
+        try:
+            pr = get_pr_by_number(current_id)
+            if pr:
+                all_prs.append(pr)
+                print(f"PR #{current_id} を取得しました")
+                count += 1
+            else:
+                print(f"PR #{current_id} は存在しないためスキップします")
+            
+            current_id += 1
+            
+            if max_id and current_id > max_id:
+                print(f"最大ID #{max_id} に到達しました。処理を終了します。")
+                break
+            
+            if limit and count >= limit:
+                print(f"最大取得数 {limit} に到達しました。処理を終了します。")
+                break
+            
+            # APIレート制限を考慮して少し待機
+            time.sleep(0.5)
+        
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 403 and "API rate limit exceeded" in e.response.text:
+                print("GitHubのAPIレート制限に達しました。処理を終了します。")
+                break
+            print(f"PR #{current_id} の取得中にエラーが発生しました: {e}")
+            current_id += 1  # エラーが発生したら次のIDに進む
+        
+        except Exception as e:
+            print(f"PR #{current_id} の取得中にエラーが発生しました: {e}")
+            current_id += 1  # エラーが発生したら次のIDに進む
+    
+    return all_prs
+
+
+def get_pull_requests_priority(status_data, limit=None):
+    """未取得のPRを優先的に取得する"""
+    all_prs = []
+    count = 0
+    
+    none_ids = [int(pr_id) for pr_id, fetch_time in status_data.items() if fetch_time is None]
+    none_ids.sort()  # ID順にソート
+    
+    print(f"{len(none_ids)}件の未取得PRを優先的に取得します...")
+    
+    for pr_id in none_ids:
+        try:
+            pr = get_pr_by_number(pr_id)
+            if pr:
+                all_prs.append(pr)
+                print(f"PR #{pr_id} を取得しました")
+                count += 1
+            else:
+                print(f"PR #{pr_id} は存在しないためスキップします")
+            
+            if limit and count >= limit:
+                print(f"最大取得数 {limit} に到達しました。処理を終了します。")
+                break
+            
+            # APIレート制限を考慮して少し待機
+            time.sleep(0.5)
+        
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 403 and "API rate limit exceeded" in e.response.text:
+                print("GitHubのAPIレート制限に達しました。処理を終了します。")
+                break
+            print(f"PR #{pr_id} の取得中にエラーが発生しました: {e}")
+        
+        except Exception as e:
+            print(f"PR #{pr_id} の取得中にエラーが発生しました: {e}")
+    
+    if limit and count < limit:
+        remaining_limit = limit - count
+        print(f"未取得PRの取得が完了しました。残り {remaining_limit} 件を更新日時順で取得します...")
+        
+        prs = get_pull_requests(limit=remaining_limit, sort_by="updated", direction="desc")
+        all_prs.extend(prs)
+    
+    return all_prs
+
+
 def get_open_pull_requests(limit=None):
     """オープン状態のPull Requestを取得する（後方互換性のため）"""
     return get_pull_requests(limit=limit, state="open")
@@ -161,6 +252,17 @@ def get_pr_basic_info(pr_number):
     """PRの基本情報のみを取得する"""
     url = f"{API_BASE_URL}/repos/{REPO_OWNER}/{REPO_NAME}/pulls/{pr_number}"
     return make_github_api_request(url)
+
+
+def get_pr_by_number(pr_number):
+    """PR番号を指定してPRを取得する"""
+    try:
+        return get_pr_basic_info(pr_number)
+    except requests.exceptions.HTTPError as e:
+        if e.response.status_code == 404:
+            print(f"PR #{pr_number} は存在しません")
+            return None
+        raise
 
 
 def get_pr_comments(pr_number):
@@ -286,7 +388,7 @@ def load_last_run_info(base_output_dir):
     
     if last_run_file.exists():
         try:
-            with open(last_run_file, "r", encoding="utf-8") as f:
+            with open(last_run_file, encoding="utf-8") as f:
                 last_run_info = json.load(f)
             
             last_updated_at = datetime.datetime.fromisoformat(last_run_info["last_updated_at"])
@@ -311,7 +413,7 @@ def load_previous_prs_data(base_output_dir):
     
     if json_file.exists():
         try:
-            with open(json_file, "r", encoding="utf-8") as f:
+            with open(json_file, encoding="utf-8") as f:
                 prs_data = json.load(f)
             print(f"前回のPRデータを読み込みました: {len(prs_data)}件 ({json_file})")
             return prs_data
@@ -320,6 +422,32 @@ def load_previous_prs_data(base_output_dir):
     
     print("前回のPRデータが見つかりませんでした")
     return []
+
+
+def load_pr_status_data(base_output_dir):
+    """PRの取得状況データを読み込む"""
+    status_file = Path(base_output_dir) / "pr_status.json"
+    
+    if status_file.exists():
+        try:
+            with open(status_file, encoding="utf-8") as f:
+                status_data = json.load(f)
+            print(f"PRの取得状況データを読み込みました: {len(status_data)}件のPR")
+            return status_data
+        except Exception as e:
+            print(f"PRの取得状況データの読み込み中にエラーが発生しました: {e}")
+    
+    print("PRの取得状況データが見つかりませんでした")
+    return {}
+
+
+def save_pr_status_data(base_output_dir, status_data):
+    """PRの取得状況データを保存する"""
+    status_file = Path(base_output_dir) / "pr_status.json"
+    
+    with open(status_file, "w", encoding="utf-8") as f:
+        json.dump(status_data, f, ensure_ascii=False, indent=2)
+    print(f"PRの取得状況データを {status_file} に保存しました: {len(status_data)}件")
 
 
 def generate_markdown(prs_data, filename):
@@ -515,6 +643,25 @@ def parse_arguments():
         "--open-only",
         action="store_true",
         help="オープン状態のPRのみを取得する",
+    )
+    fetch_group.add_argument(
+        "--fetch-mode",
+        type=str,
+        choices=["updated", "sequential", "priority"],
+        default="updated",
+        help="PRの取得モード: updated=更新日時順, sequential=ID順, priority=未取得優先 (デフォルト: updated)",
+    )
+    fetch_group.add_argument(
+        "--start-id",
+        type=int,
+        default=1,
+        help="ID順取得時の開始ID (デフォルト: 1)",
+    )
+    fetch_group.add_argument(
+        "--max-id",
+        type=int,
+        default=0,
+        help="ID順取得時の最大ID (デフォルト: 0=制限なし)",
     )
     
     report_group = parser.add_argument_group("レポート生成オプション (--mode report または both の場合)")
@@ -724,6 +871,10 @@ def fetch_pr_data(args):
             print("処理を中止します。")
             return None
 
+    status_data = {}
+    if not args.ignore_last_run:
+        status_data = load_pr_status_data(base_output_dir)
+
     last_updated_at = None
     if not args.ignore_last_run:
         last_updated_at = load_last_run_info(base_output_dir)
@@ -731,13 +882,25 @@ def fetch_pr_data(args):
     limit = args.limit if args.limit > 0 else None
     pr_state = "open" if args.open_only else "all"
     
-    prs = get_pull_requests(
-        limit=limit, 
-        sort_by="updated", 
-        direction="desc", 
-        last_updated_at=last_updated_at,
-        state=pr_state
-    )
+    if args.fetch_mode == "sequential":
+        prs = get_pull_requests_sequential(
+            start_id=args.start_id,
+            max_id=args.max_id if args.max_id > 0 else None,
+            limit=limit
+        )
+    elif args.fetch_mode == "priority":
+        prs = get_pull_requests_priority(
+            status_data=status_data,
+            limit=limit
+        )
+    else:  # "updated"モード（デフォルト）
+        prs = get_pull_requests(
+            limit=limit, 
+            sort_by="updated", 
+            direction="desc", 
+            last_updated_at=last_updated_at,
+            state=pr_state
+        )
     
     print(f"{len(prs)}件のPRを見つけました")
 
@@ -776,6 +939,9 @@ def fetch_pr_data(args):
             result = future.result()
             if result is not None:  # 有効なPRデータのみを追加
                 valid_prs_data.append(result)
+                pr_number = str(result["basic_info"]["number"])
+                pr_updated_at = result["updated_at"]
+                status_data[pr_number] = pr_updated_at
             else:
                 error_prs.append("不明なPR")  # PR番号が取得できない場合
 
@@ -805,6 +971,8 @@ def fetch_pr_data(args):
             if "updated_at" in pr
         )
         save_last_run_info(base_output_dir, latest_updated_at)
+        
+        save_pr_status_data(base_output_dir, status_data)
 
     json_filename = output_dir / "prs_data.json"
     save_to_json(valid_prs_data, json_filename)
@@ -829,7 +997,7 @@ def generate_reports(args, json_path=None, output_dir=None, prs_data=None):
             json_path = args.input_json
         
         print(f"JSONファイル {json_path} からデータを読み込んでいます...")
-        with open(json_path, "r", encoding="utf-8") as f:
+        with open(json_path, encoding="utf-8") as f:
             prs_data = json.load(f)
         
         print(f"{len(prs_data)}件のPRデータを読み込みました")
