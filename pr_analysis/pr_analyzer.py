@@ -485,38 +485,56 @@ def generate_summary_markdown(prs_data, filename):
 def parse_arguments():
     """コマンドライン引数を解析する"""
     parser = argparse.ArgumentParser(description="GitHub PRの分析ツール")
+    
     parser.add_argument(
+        "--mode",
+        type=str,
+        choices=["fetch", "report", "both"],
+        default="both",
+        help="実行モード: fetch=PRデータのみ取得, report=既存JSONからレポート生成, both=両方実行 (デフォルト: both)",
+    )
+    
+    fetch_group = parser.add_argument_group("PR取得オプション (--mode fetch または both の場合)")
+    fetch_group.add_argument(
         "--limit",
         type=int,
         default=0,
         help="取得するPRの最大数 (デフォルト: 全て)",
     )
-    parser.add_argument("--workers", type=int, default=10, help="並列処理のワーカー数 (デフォルト: 10)")
-    parser.add_argument("--no-comments", action="store_true", help="コメントを取得しない")
-    parser.add_argument("--no-review-comments", action="store_true", help="レビューコメントを取得しない")
-    parser.add_argument("--no-commits", action="store_true", help="コミット情報を取得しない")
-    parser.add_argument("--no-files", action="store_true", help="変更ファイル情報を取得しない")
+    fetch_group.add_argument("--workers", type=int, default=10, help="並列処理のワーカー数 (デフォルト: 10)")
+    fetch_group.add_argument("--no-comments", action="store_true", help="コメントを取得しない")
+    fetch_group.add_argument("--no-review-comments", action="store_true", help="レビューコメントを取得しない")
+    fetch_group.add_argument("--no-commits", action="store_true", help="コミット情報を取得しない")
+    fetch_group.add_argument("--no-files", action="store_true", help="変更ファイル情報を取得しない")
+    fetch_group.add_argument(
+        "--ignore-last-run",
+        action="store_true",
+        help="前回の実行情報を無視して全PRを取得する",
+    )
+    fetch_group.add_argument(
+        "--open-only",
+        action="store_true",
+        help="オープン状態のPRのみを取得する",
+    )
+    
+    report_group = parser.add_argument_group("レポート生成オプション (--mode report または both の場合)")
+    report_group.add_argument(
+        "--filter-state",
+        type=str,
+        choices=["open", "closed"],
+        help="指定した状態のPRのみをレポートに含める",
+    )
+    report_group.add_argument(
+        "--input-json",
+        type=str,
+        help="レポート生成に使用するJSONファイルのパス (--mode report の場合に必須)",
+    )
+    
     parser.add_argument(
         "--output-dir",
         type=str,
         default="",
         help="出力ディレクトリ (デフォルト: timestamp)",
-    )
-    parser.add_argument(
-        "--ignore-last-run",
-        action="store_true",
-        help="前回の実行情報を無視して全PRを取得する",
-    )
-    parser.add_argument(
-        "--open-only",
-        action="store_true",
-        help="オープン状態のPRのみを取得する",
-    )
-    parser.add_argument(
-        "--filter-state",
-        type=str,
-        choices=["open", "closed"],
-        help="指定した状態のPRのみをレポートに含める",
     )
     parser.add_argument(
         "--base-output-dir",
@@ -525,7 +543,12 @@ def parse_arguments():
         help="基本出力ディレクトリ (デフォルト: pr_analysis_results)",
     )
 
-    return parser.parse_args()
+    args = parser.parse_args()
+    
+    if args.mode == "report" and not args.input_json:
+        parser.error("--mode report の場合、--input-json が必須です")
+        
+    return args
 
 
 def generate_issues_and_diffs_markdown(prs_data, filename):
@@ -678,9 +701,11 @@ def generate_file_based_markdown(prs_data, output_dir):
     print(f"ファイル一覧インデックスを {output_dir / 'files_index.md'} に保存しました")
 
 
-def main():
-    args = parse_arguments()
-
+def fetch_pr_data(args):
+    """
+    GitHubからPRデータを取得してJSONに保存する関数
+    この関数はGitHub APIを消費する
+    """
     base_output_dir = Path(args.base_output_dir)
     base_output_dir.mkdir(exist_ok=True)
 
@@ -697,7 +722,7 @@ def main():
         proceed = input("続行しますか？ (y/n): ")
         if proceed.lower() != "y":
             print("処理を中止します。")
-            return
+            return None
 
     last_updated_at = None
     if not args.ignore_last_run:
@@ -718,7 +743,7 @@ def main():
 
     if not prs:
         print("処理対象のPRがありません。処理を終了します。")
-        return
+        return None
 
     previous_prs_data = []
     if not args.ignore_last_run and last_updated_at:
@@ -763,11 +788,6 @@ def main():
         
         print(f"前回のデータと統合: 合計{len(valid_prs_data)}件のPR")
 
-    filtered_prs_data = valid_prs_data
-    if args.filter_state:
-        filtered_prs_data = [pr for pr in valid_prs_data if pr["state"] == args.filter_state]
-        print(f"状態 '{args.filter_state}' でフィルタリング: {len(filtered_prs_data)}/{len(valid_prs_data)}件")
-
     print(f"処理結果: 成功={len(valid_prs_data)}件, エラー={len(error_prs)}件")
 
     if error_prs:
@@ -788,7 +808,45 @@ def main():
 
     json_filename = output_dir / "prs_data.json"
     save_to_json(valid_prs_data, json_filename)
+    
+    print("PRデータの取得と保存が完了しました。")
+    print(f"JSON出力: {json_filename}")
+    
+    return {
+        "json_path": json_filename,
+        "output_dir": output_dir,
+        "prs_data": valid_prs_data
+    }
 
+
+def generate_reports(args, json_path=None, output_dir=None, prs_data=None):
+    """
+    JSONデータからMarkdownレポートを生成する関数
+    この関数はGitHub APIを消費しない
+    """
+    if prs_data is None:
+        if json_path is None:
+            json_path = args.input_json
+        
+        print(f"JSONファイル {json_path} からデータを読み込んでいます...")
+        with open(json_path, "r", encoding="utf-8") as f:
+            prs_data = json.load(f)
+        
+        print(f"{len(prs_data)}件のPRデータを読み込みました")
+    
+    if output_dir is None:
+        base_output_dir = Path(args.base_output_dir)
+        base_output_dir.mkdir(exist_ok=True)
+        
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_dir = Path(args.output_dir or f"{base_output_dir}/{timestamp}_report")
+        output_dir.mkdir(exist_ok=True, parents=True)
+    
+    filtered_prs_data = prs_data
+    if args.filter_state:
+        filtered_prs_data = [pr for pr in prs_data if pr["state"] == args.filter_state]
+        print(f"状態 '{args.filter_state}' でフィルタリング: {len(filtered_prs_data)}/{len(prs_data)}件")
+    
     md_filename = output_dir / "prs_report.md"
     generate_markdown(filtered_prs_data, md_filename)
 
@@ -800,12 +858,33 @@ def main():
 
     generate_file_based_markdown(filtered_prs_data, output_dir)
 
-    print("処理が完了しました。")
-    print(f"JSON出力: {json_filename}")
+    print("レポート生成が完了しました。")
     print(f"詳細Markdown出力: {md_filename}")
     print(f"サマリーMarkdown出力: {summary_md_filename}")
     print(f"Issues内容と変更差分出力: {issues_diffs_md_filename}")
     print(f"ファイルごとのMarkdown出力: {output_dir / 'files'} (インデックス: {output_dir / 'files_index.md'})")
+
+
+def main():
+    """
+    メイン関数
+    モードに応じて処理を分岐する
+    """
+    args = parse_arguments()
+    
+    if args.mode in ["fetch", "both"]:
+        result = fetch_pr_data(args)
+        if result is None:
+            return
+        
+        if args.mode == "both":
+            generate_reports(args, 
+                            json_path=result["json_path"], 
+                            output_dir=result["output_dir"], 
+                            prs_data=result["prs_data"])
+    
+    elif args.mode == "report":
+        generate_reports(args)
 
 
 if __name__ == "__main__":
