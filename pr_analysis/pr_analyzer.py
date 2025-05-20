@@ -1067,7 +1067,7 @@ def generate_reports(args, json_path=None, output_dir=None, prs_data=None):
                         categories[category] = []
                     categories[category].append((pr, classification))
                 
-                summary_f.write(f"\n## 分類統計\n\n")
+                summary_f.write("\n## 分類統計\n\n")
                 for category, prs in sorted(categories.items()):
                     summary_f.write(f"- {category}: {len(prs)}件\n")
             
