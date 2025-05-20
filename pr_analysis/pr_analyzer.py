@@ -678,6 +678,11 @@ def parse_arguments():
         type=str,
         help="レポート生成に使用するJSONファイルのパス (--mode report の場合に必須)",
     )
+    report_group.add_argument(
+        "--classify-readme",
+        action="store_true",
+        help="README対象のPRを分類する"
+    )
     
     parser.add_argument(
         "--output-dir",
@@ -1017,6 +1022,80 @@ def generate_reports(args, json_path=None, output_dir=None, prs_data=None):
         filtered_prs_data = [pr for pr in prs_data if pr["state"] == args.filter_state]
         print(f"状態 '{args.filter_state}' でフィルタリング: {len(filtered_prs_data)}/{len(prs_data)}件")
     
+    if args.classify_readme:
+        from content_classifier import ContentClassifier
+        classifier = ContentClassifier()
+        
+        readme_prs = []
+        for pr in filtered_prs_data:
+            is_readme_pr = False
+            if "files" in pr and pr["files"]:
+                for file in pr["files"]:
+                    if file["filename"].lower() == "readme.md":
+                        is_readme_pr = True
+                        break
+            
+            if is_readme_pr:
+                readme_prs.append(pr)
+        
+        print(f"README対象PRを検出: {len(readme_prs)}件")
+        
+        if readme_prs:
+            classified_dir = output_dir / "classified"
+            classified_dir.mkdir(exist_ok=True)
+            
+            with open(classified_dir / "classification_summary.md", "w", encoding="utf-8") as summary_f:
+                summary_f.write("# README対象PRの分類結果\n\n")
+                summary_f.write("| PR番号 | タイトル | 分類カテゴリ | 信頼度 | 説明 |\n")
+                summary_f.write("|--------|----------|--------------|--------|------|\n")
+                
+                categories = {}
+                
+                for pr in tqdm(readme_prs, desc="README対象PRの分類"):
+                    classification = classifier.classify_content(pr)
+                    category = classification.get("category", "分類不能")
+                    confidence = classification.get("confidence", 0.0)
+                    explanation = classification.get("explanation", "")
+                    
+                    basic = pr["basic_info"]
+                    pr_number = basic["number"]
+                    title = basic["title"]
+                    
+                    summary_f.write(f"| #{pr_number} | {title} | {category} | {confidence:.2f} | {explanation} |\n")
+                    
+                    if category not in categories:
+                        categories[category] = []
+                    categories[category].append((pr, classification))
+                
+                summary_f.write(f"\n## 分類統計\n\n")
+                for category, prs in sorted(categories.items()):
+                    summary_f.write(f"- {category}: {len(prs)}件\n")
+            
+            for category, prs in categories.items():
+                safe_category = category.replace("/", "_").replace("\\", "_")
+                category_file = classified_dir / f"{safe_category}.md"
+                
+                with open(category_file, "w", encoding="utf-8") as f:
+                    f.write(f"# カテゴリ: {category} の Pull Requests\n\n")
+                    
+                    for pr, classification in prs:
+                        basic = pr["basic_info"]
+                        pr_number = basic["number"]
+                        title = basic["title"]
+                        confidence = classification.get("confidence", 0.0)
+                        explanation = classification.get("explanation", "")
+                        
+                        f.write(f"## #{pr_number}: {title}\n\n")
+                        f.write(f"- 信頼度: {confidence:.2f}\n")
+                        f.write(f"- 分類理由: {explanation}\n\n")
+                        
+                        if basic["body"]:
+                            f.write(f"### PR内容\n\n{basic['body']}\n\n")
+                        
+                        f.write("---\n\n")
+            
+            print(f"README対象PRの分類結果を {classified_dir} に保存しました")
+    
     md_filename = output_dir / "prs_report.md"
     generate_markdown(filtered_prs_data, md_filename)
 
@@ -1033,6 +1112,16 @@ def generate_reports(args, json_path=None, output_dir=None, prs_data=None):
     print(f"サマリーMarkdown出力: {summary_md_filename}")
     print(f"Issues内容と変更差分出力: {issues_diffs_md_filename}")
     print(f"ファイルごとのMarkdown出力: {output_dir / 'files'} (インデックス: {output_dir / 'files_index.md'})")
+    
+    if args.classify_readme:
+        # readme_prsとclassified_dirが定義されている場合のみ出力
+        classification_summary_path = None
+        if 'readme_prs' in locals() and readme_prs:
+            if 'classified_dir' in locals():
+                classification_summary_path = classified_dir / 'classification_summary.md'
+        
+        if classification_summary_path:
+            print(f"README対象PR分類結果: {classification_summary_path}")
 
 
 def main():
