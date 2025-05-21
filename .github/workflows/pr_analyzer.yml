@@ -1,35 +1,35 @@
 name: PR分析とREADME対象PR分類
 
 on:
-  schedule:
-    - cron: '0 0 * * 0'  # 毎週日曜日の午前0時に実行
-  workflow_dispatch:  # 手動実行も可能にする
+  #schedule:
+  #  - cron: '0 0 * * 0'  # 毎週日曜日の午前0時に実行
+  workflow_dispatch: # 手動実行も可能にする
 
 jobs:
   analyze_prs:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: リポジトリのチェックアウト
         uses: actions/checkout@v3
-        
+
       - name: Pythonのセットアップ
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
-          
+          python-version: "3.10"
+
       - name: 依存パッケージのインストール
         run: |
           python -m pip install --upgrade pip
           pip install requests backoff tqdm
-          
+
       - name: PR分析の実行
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
           python pr_analysis/pr_analyzer.py --mode both --classify-readme --fetch-mode priority
-          
+
       - name: 分析結果のアップロード
         uses: actions/upload-artifact@v3
         with:

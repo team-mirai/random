@@ -1,9 +1,9 @@
 name: Update Policy PR Data
 
 on:
-  schedule:
-    - cron: '0 * * * *'  # 毎時0分に実行
-  workflow_dispatch:     # 手動トリガーを許可
+  #schedule:
+  #  - cron: '0 * * * *'  # 毎時0分に実行
+  workflow_dispatch: # 手動トリガーを許可
 
 jobs:
   update-data:
@@ -11,32 +11,32 @@ jobs:
     steps:
       - name: Checkout random repository
         uses: actions/checkout@v3
-        
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
-          
+          python-version: "3.10"
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r pr_analysis/requirements.txt
-          
+
       - name: Run PR data collection
         run: |
           python pr_analysis/pr_analyzer.py --mode fetch --fetch-mode priority
-          
+
       - name: Checkout policy-pr-data repository
         uses: actions/checkout@v3
         with:
           repository: team-mirai/policy-pr-data
           path: policy-pr-data
           token: ${{ secrets.POLICY_PR_DATA_TOKEN }}
-          
+
       - name: Copy and rename data file
         run: |
           cp pr_analysis_results/merged/merged_prs_data.json policy-pr-data/all-data.json
-          
+
       - name: Commit and push changes
         run: |
           cd policy-pr-data
