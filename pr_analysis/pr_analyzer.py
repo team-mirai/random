@@ -87,7 +87,7 @@ def check_rate_limit():
 
 def get_pull_requests(limit=None, sort_by="updated", direction="desc", last_updated_at=None, state="open"):
     """Pull Requestを取得する
-    
+
     Args:
         limit: 取得するPRの最大数
         sort_by: ソート基準 ("created", "updated", "popularity", "long-running")
@@ -101,13 +101,7 @@ def get_pull_requests(limit=None, sort_by="updated", direction="desc", last_upda
 
     while True:
         url = f"{API_BASE_URL}/repos/{REPO_OWNER}/{REPO_NAME}/pulls"
-        params = {
-            "state": state, 
-            "per_page": per_page, 
-            "page": page,
-            "sort": sort_by,
-            "direction": direction
-        }
+        params = {"state": state, "per_page": per_page, "page": page, "sort": sort_by, "direction": direction}
 
         try:
             prs = make_github_api_request(url, params=params)
@@ -122,15 +116,15 @@ def get_pull_requests(limit=None, sort_by="updated", direction="desc", last_upda
                         print(f"前回処理済みのPR #{pr['number']} に到達しました。処理を終了します。")
                         break
                     new_prs.append(pr)
-                
+
                 if len(new_prs) < len(prs):
                     all_prs.extend(new_prs)
                     break
-                
+
                 all_prs.extend(new_prs)
             else:
                 all_prs.extend(prs)
-            
+
             page += 1
 
             if limit and len(all_prs) >= limit:
@@ -157,9 +151,9 @@ def get_pull_requests_sequential(start_id=1, max_id=None, limit=None):
     all_prs = []
     current_id = start_id
     count = 0
-    
+
     print(f"PR番号 #{start_id} から順にPRを取得します...")
-    
+
     while True:
         try:
             pr = get_pr_by_number(current_id)
@@ -171,31 +165,31 @@ def get_pull_requests_sequential(start_id=1, max_id=None, limit=None):
                 print(f"PR #{current_id} は存在しないためスキップします")
                 print(f"PR #{current_id} が存在しないため、これ以上のPRは存在しないと判断して処理を終了します。")
                 break
-            
+
             current_id += 1
-            
+
             if max_id and current_id > max_id:
                 print(f"最大ID #{max_id} に到達しました。処理を終了します。")
                 break
-            
+
             if limit and count >= limit:
                 print(f"最大取得数 {limit} に到達しました。処理を終了します。")
                 break
-            
+
             # APIレート制限を考慮して少し待機
             time.sleep(0.5)
-        
+
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 403 and "API rate limit exceeded" in e.response.text:
                 print("GitHubのAPIレート制限に達しました。処理を終了します。")
                 break
             print(f"PR #{current_id} の取得中にエラーが発生しました: {e}")
             current_id += 1  # エラーが発生したら次のIDに進む
-        
+
         except Exception as e:
             print(f"PR #{current_id} の取得中にエラーが発生しました: {e}")
             current_id += 1  # エラーが発生したら次のIDに進む
-    
+
     return all_prs
 
 
@@ -203,12 +197,12 @@ def get_pull_requests_priority(status_data, limit=None, last_updated_at=None):
     """未取得のPRを優先的に取得する"""
     all_prs = []
     count = 0
-    
+
     none_ids = [int(pr_id) for pr_id, fetch_time in status_data.items() if fetch_time is None]
     none_ids.sort()  # ID順にソート
-    
+
     print(f"{len(none_ids)}件の未取得PRを優先的に取得します...")
-    
+
     for pr_id in none_ids:
         try:
             pr = get_pr_by_number(pr_id)
@@ -218,35 +212,32 @@ def get_pull_requests_priority(status_data, limit=None, last_updated_at=None):
                 count += 1
             else:
                 print(f"PR #{pr_id} は存在しないためスキップします")
-            
+
             if limit and count >= limit:
                 print(f"最大取得数 {limit} に到達しました。処理を終了します。")
                 break
-            
+
             # APIレート制限を考慮して少し待機
             time.sleep(0.5)
-        
+
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 403 and "API rate limit exceeded" in e.response.text:
                 print("GitHubのAPIレート制限に達しました。処理を終了します。")
                 break
             print(f"PR #{pr_id} の取得中にエラーが発生しました: {e}")
-        
+
         except Exception as e:
             print(f"PR #{pr_id} の取得中にエラーが発生しました: {e}")
-    
+
     if limit and count < limit:
         remaining_limit = limit - count
         print(f"未取得PRの取得が完了しました。残り {remaining_limit} 件を更新日時順で取得します...")
-        
+
         prs = get_pull_requests(
-            limit=remaining_limit, 
-            sort_by="updated", 
-            direction="desc",
-            last_updated_at=last_updated_at
+            limit=remaining_limit, sort_by="updated", direction="desc", last_updated_at=last_updated_at
         )
         all_prs.extend(prs)
-    
+
     return all_prs
 
 
@@ -316,7 +307,7 @@ def get_pr_details(
     pr_details = {
         "basic_info": pr_data,
         "state": pr_data["state"],  # open または closed
-        "updated_at": pr_data["updated_at"]  # 更新日時を保存
+        "updated_at": pr_data["updated_at"],  # 更新日時を保存
     }
 
     if include_labels:
@@ -378,11 +369,8 @@ def save_to_json(data, filename):
 
 def save_last_run_info(output_dir, last_updated_at):
     """最後の実行情報を保存する"""
-    last_run_info = {
-        "last_updated_at": last_updated_at.isoformat(),
-        "timestamp": datetime.datetime.now().isoformat()
-    }
-    
+    last_run_info = {"last_updated_at": last_updated_at.isoformat(), "timestamp": datetime.datetime.now().isoformat()}
+
     last_run_file = Path(output_dir) / "last_run_info.json"
     with open(last_run_file, "w", encoding="utf-8") as f:
         json.dump(last_run_info, f, ensure_ascii=False, indent=2)
@@ -392,18 +380,18 @@ def save_last_run_info(output_dir, last_updated_at):
 def load_last_run_info(base_output_dir):
     """最後の実行情報を読み込む"""
     last_run_file = Path(base_output_dir) / "last_run_info.json"
-    
+
     if last_run_file.exists():
         try:
             with open(last_run_file, encoding="utf-8") as f:
                 last_run_info = json.load(f)
-            
+
             last_updated_at = datetime.datetime.fromisoformat(last_run_info["last_updated_at"])
             print(f"前回の実行情報を読み込みました: 最終更新日時 = {last_updated_at}")
             return last_updated_at
         except Exception as e:
             print(f"前回の実行情報の読み込み中にエラーが発生しました: {e}")
-    
+
     print("前回の実行情報が見つかりませんでした")
     return None
 
@@ -414,10 +402,10 @@ def load_previous_prs_data(base_output_dir):
     if not dirs:
         print("前回のPRデータが見つかりませんでした")
         return []
-    
+
     latest_dir = max(dirs, key=lambda d: d.stat().st_mtime)
     json_file = latest_dir / "prs_data.json"
-    
+
     if json_file.exists():
         try:
             with open(json_file, encoding="utf-8") as f:
@@ -426,7 +414,7 @@ def load_previous_prs_data(base_output_dir):
             return prs_data
         except Exception as e:
             print(f"前回のPRデータの読み込み中にエラーが発生しました: {e}")
-    
+
     print("前回のPRデータが見つかりませんでした")
     return []
 
@@ -434,7 +422,7 @@ def load_previous_prs_data(base_output_dir):
 def load_pr_status_data(base_output_dir):
     """PRの取得状況データを読み込む"""
     status_file = Path(base_output_dir) / "pr_status.json"
-    
+
     if status_file.exists():
         try:
             with open(status_file, encoding="utf-8") as f:
@@ -443,7 +431,7 @@ def load_pr_status_data(base_output_dir):
             return status_data
         except Exception as e:
             print(f"PRの取得状況データの読み込み中にエラーが発生しました: {e}")
-    
+
     print("PRの取得状況データが見つかりませんでした")
     return {}
 
@@ -451,7 +439,7 @@ def load_pr_status_data(base_output_dir):
 def save_pr_status_data(base_output_dir, status_data):
     """PRの取得状況データを保存する"""
     status_file = Path(base_output_dir) / "pr_status.json"
-    
+
     with open(status_file, "w", encoding="utf-8") as f:
         json.dump(status_data, f, ensure_ascii=False, indent=2)
     print(f"PRの取得状況データを {status_file} に保存しました: {len(status_data)}件")
@@ -620,7 +608,7 @@ def generate_summary_markdown(prs_data, filename):
 def parse_arguments():
     """コマンドライン引数を解析する"""
     parser = argparse.ArgumentParser(description="GitHub PRの分析ツール")
-    
+
     parser.add_argument(
         "--mode",
         type=str,
@@ -628,7 +616,7 @@ def parse_arguments():
         default="both",
         help="実行モード: fetch=PRデータのみ取得, report=既存JSONからレポート生成, both=両方実行 (デフォルト: both)",
     )
-    
+
     fetch_group = parser.add_argument_group("PR取得オプション (--mode fetch または both の場合)")
     fetch_group.add_argument(
         "--limit",
@@ -670,7 +658,7 @@ def parse_arguments():
         default=0,
         help="ID順取得時の最大ID (デフォルト: 0=制限なし)",
     )
-    
+
     report_group = parser.add_argument_group("レポート生成オプション (--mode report または both の場合)")
     report_group.add_argument(
         "--filter-state",
@@ -683,12 +671,8 @@ def parse_arguments():
         type=str,
         help="レポート生成に使用するJSONファイルのパス (--mode report の場合に必須)",
     )
-    report_group.add_argument(
-        "--classify-readme",
-        action="store_true",
-        help="README対象のPRを分類する"
-    )
-    
+    report_group.add_argument("--classify-readme", action="store_true", help="README対象のPRを分類する")
+
     parser.add_argument(
         "--output-dir",
         type=str,
@@ -703,10 +687,10 @@ def parse_arguments():
     )
 
     args = parser.parse_args()
-    
+
     if args.mode == "report" and not args.input_json:
         parser.error("--mode report の場合、--input-json が必須です")
-        
+
     return args
 
 
@@ -893,28 +877,18 @@ def fetch_pr_data(args):
 
     limit = args.limit if args.limit > 0 else None
     pr_state = "open" if args.open_only else "all"
-    
+
     if args.fetch_mode == "sequential":
         prs = get_pull_requests_sequential(
-            start_id=args.start_id,
-            max_id=args.max_id if args.max_id > 0 else None,
-            limit=limit
+            start_id=args.start_id, max_id=args.max_id if args.max_id > 0 else None, limit=limit
         )
     elif args.fetch_mode == "priority":
-        prs = get_pull_requests_priority(
-            status_data=status_data,
-            limit=limit,
-            last_updated_at=last_updated_at
-        )
+        prs = get_pull_requests_priority(status_data=status_data, limit=limit, last_updated_at=last_updated_at)
     else:  # "updated"モード（デフォルト）
         prs = get_pull_requests(
-            limit=limit, 
-            sort_by="updated", 
-            direction="desc", 
-            last_updated_at=last_updated_at,
-            state=pr_state
+            limit=limit, sort_by="updated", direction="desc", last_updated_at=last_updated_at, state=pr_state
         )
-    
+
     print(f"{len(prs)}件のPRを見つけました")
 
     if not prs:
@@ -960,11 +934,11 @@ def fetch_pr_data(args):
 
     if previous_prs_data:
         current_pr_ids = {pr["basic_info"]["number"] for pr in valid_prs_data}
-        
+
         for pr in previous_prs_data:
             if pr["basic_info"]["number"] not in current_pr_ids:
                 valid_prs_data.append(pr)
-        
+
         print(f"前回のデータと統合: 合計{len(valid_prs_data)}件のPR")
 
     print(f"処理結果: 成功={len(valid_prs_data)}件, エラー={len(error_prs)}件")
@@ -984,20 +958,16 @@ def fetch_pr_data(args):
             if "updated_at" in pr
         )
         save_last_run_info(base_output_dir, latest_updated_at)
-        
+
         save_pr_status_data(base_output_dir, status_data)
 
     json_filename = output_dir / "prs_data.json"
     save_to_json(valid_prs_data, json_filename)
-    
+
     print("PRデータの取得と保存が完了しました。")
     print(f"JSON出力: {json_filename}")
-    
-    return {
-        "json_path": json_filename,
-        "output_dir": output_dir,
-        "prs_data": valid_prs_data
-    }
+
+    return {"json_path": json_filename, "output_dir": output_dir, "prs_data": valid_prs_data}
 
 
 def generate_reports(args, json_path=None, output_dir=None, prs_data=None):
@@ -1008,30 +978,31 @@ def generate_reports(args, json_path=None, output_dir=None, prs_data=None):
     if prs_data is None:
         if json_path is None:
             json_path = args.input_json
-        
+
         print(f"JSONファイル {json_path} からデータを読み込んでいます...")
         with open(json_path, encoding="utf-8") as f:
             prs_data = json.load(f)
-        
+
         print(f"{len(prs_data)}件のPRデータを読み込みました")
-    
+
     if output_dir is None:
         base_output_dir = Path(args.base_output_dir)
         base_output_dir.mkdir(exist_ok=True)
-        
+
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         output_dir = Path(args.output_dir or f"{base_output_dir}/{timestamp}_report")
         output_dir.mkdir(exist_ok=True, parents=True)
-    
+
     filtered_prs_data = prs_data
     if args.filter_state:
         filtered_prs_data = [pr for pr in prs_data if pr["state"] == args.filter_state]
         print(f"状態 '{args.filter_state}' でフィルタリング: {len(filtered_prs_data)}/{len(prs_data)}件")
-    
+
     if args.classify_readme:
         from content_classifier import ContentClassifier
+
         classifier = ContentClassifier()
-        
+
         readme_prs = []
         for pr in filtered_prs_data:
             is_readme_pr = False
@@ -1040,68 +1011,68 @@ def generate_reports(args, json_path=None, output_dir=None, prs_data=None):
                     if file["filename"].lower() == "readme.md":
                         is_readme_pr = True
                         break
-            
+
             if is_readme_pr:
                 readme_prs.append(pr)
-        
+
         print(f"README対象PRを検出: {len(readme_prs)}件")
-        
+
         if readme_prs:
             classified_dir = output_dir / "classified"
             classified_dir.mkdir(exist_ok=True)
-            
+
             with open(classified_dir / "classification_summary.md", "w", encoding="utf-8") as summary_f:
                 summary_f.write("# README対象PRの分類結果\n\n")
                 summary_f.write("| PR番号 | タイトル | 分類カテゴリ | 信頼度 | 説明 |\n")
                 summary_f.write("|--------|----------|--------------|--------|------|\n")
-                
+
                 categories = {}
-                
+
                 for pr in tqdm(readme_prs, desc="README対象PRの分類"):
                     classification = classifier.classify_content(pr)
                     category = classification.get("category", "分類不能")
                     confidence = classification.get("confidence", 0.0)
                     explanation = classification.get("explanation", "")
-                    
+
                     basic = pr["basic_info"]
                     pr_number = basic["number"]
                     title = basic["title"]
-                    
+
                     summary_f.write(f"| #{pr_number} | {title} | {category} | {confidence:.2f} | {explanation} |\n")
-                    
+
                     if category not in categories:
                         categories[category] = []
                     categories[category].append((pr, classification))
-                
+
                 summary_f.write("\n## 分類統計\n\n")
                 for category, prs in sorted(categories.items()):
                     summary_f.write(f"- {category}: {len(prs)}件\n")
-            
+
             for category, prs in categories.items():
                 safe_category = category.replace("/", "_").replace("\\", "_")
                 category_file = classified_dir / f"{safe_category}.md"
-                
+
                 with open(category_file, "w", encoding="utf-8") as f:
                     f.write(f"# カテゴリ: {category} の Pull Requests\n\n")
-                    
+
                     for pr, classification in prs:
                         basic = pr["basic_info"]
                         pr_number = basic["number"]
                         title = basic["title"]
                         confidence = classification.get("confidence", 0.0)
                         explanation = classification.get("explanation", "")
-                        
+
                         f.write(f"## #{pr_number}: {title}\n\n")
                         f.write(f"- 信頼度: {confidence:.2f}\n")
                         f.write(f"- 分類理由: {explanation}\n\n")
-                        
+
                         if basic["body"]:
                             f.write(f"### PR内容\n\n{basic['body']}\n\n")
-                        
+
                         f.write("---\n\n")
-            
+
             print(f"README対象PRの分類結果を {classified_dir} に保存しました")
-    
+
     md_filename = output_dir / "prs_report.md"
     generate_markdown(filtered_prs_data, md_filename)
 
@@ -1118,14 +1089,14 @@ def generate_reports(args, json_path=None, output_dir=None, prs_data=None):
     print(f"サマリーMarkdown出力: {summary_md_filename}")
     print(f"Issues内容と変更差分出力: {issues_diffs_md_filename}")
     print(f"ファイルごとのMarkdown出力: {output_dir / 'files'} (インデックス: {output_dir / 'files_index.md'})")
-    
+
     if args.classify_readme:
         # readme_prsとclassified_dirが定義されている場合のみ出力
         classification_summary_path = None
-        if 'readme_prs' in locals() and readme_prs:
-            if 'classified_dir' in locals():
-                classification_summary_path = classified_dir / 'classification_summary.md'
-        
+        if "readme_prs" in locals() and readme_prs:
+            if "classified_dir" in locals():
+                classification_summary_path = classified_dir / "classification_summary.md"
+
         if classification_summary_path:
             print(f"README対象PR分類結果: {classification_summary_path}")
 
@@ -1136,18 +1107,17 @@ def main():
     モードに応じて処理を分岐する
     """
     args = parse_arguments()
-    
+
     if args.mode in ["fetch", "both"]:
         result = fetch_pr_data(args)
         if result is None:
             return
-        
+
         if args.mode == "both":
-            generate_reports(args, 
-                            json_path=result["json_path"], 
-                            output_dir=result["output_dir"], 
-                            prs_data=result["prs_data"])
-    
+            generate_reports(
+                args, json_path=result["json_path"], output_dir=result["output_dir"], prs_data=result["prs_data"]
+            )
+
     elif args.mode == "report":
         generate_reports(args)
 
