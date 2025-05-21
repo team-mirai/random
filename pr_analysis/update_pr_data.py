@@ -401,8 +401,8 @@ def main():
                         print(f"APIレート制限に達しています。リセットまで {wait_time/60:.1f} 分かかります。")
                         
                         print("レート制限に達した理由を調査中...")
-                        print(f"現在時刻(UTC): {datetime.datetime.utcnow()}")
-                        print(f"現在時刻(JST): {datetime.datetime.now() + datetime.timedelta(hours=9)}")
+                        print(f"現在時刻(UTC): {datetime.datetime.now(datetime.timezone.utc)}")
+                        print(f"現在時刻(JST): {datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=9)}")
                         
                         if wait_time > 300:  # 5分以上の場合
                             print("処理を中断します。後でもう一度試してください。")
