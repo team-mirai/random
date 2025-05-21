@@ -14,14 +14,14 @@ jobs:
         uses: actions/checkout@v3
         with:
           repository: team-mirai/random
-          token: ${{ secrets.GH_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           path: random
 
       - name: Checkout policy-pr-data repository
         uses: actions/checkout@v3
         with:
           repository: team-mirai/policy-pr-data
-          token: ${{ secrets.GH_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           path: policy-pr-data
 
       - name: Set up Python
@@ -70,4 +70,22 @@ jobs:
             git commit -m "Update merged_prs_data.json - ${timestamp}"
             git push
             echo "Changes pushed to policy-pr-data repository"
+          fi
+          
+      # random repoにもデータをプッシュするステップを追加
+      - name: Commit and push to random repository
+        run: |
+          cd random
+          git config user.name "GitHub Actions Bot"
+          git config user.email "actions@github.com"
+          git add pr_analysis_results/merged/merged_prs_data.json
+
+          # 変更がある場合のみコミットする
+          if git diff --staged --quiet; then
+            echo "No changes to commit for random repository"
+          else
+            timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+            git commit -m "Update merged_prs_data.json - ${timestamp}"
+            git push
+            echo "Changes pushed to random repository"
           fi
