@@ -199,7 +199,7 @@ def get_pull_requests_sequential(start_id=1, max_id=None, limit=None):
     return all_prs
 
 
-def get_pull_requests_priority(status_data, limit=None):
+def get_pull_requests_priority(status_data, limit=None, last_updated_at=None):
     """未取得のPRを優先的に取得する"""
     all_prs = []
     count = 0
@@ -239,7 +239,12 @@ def get_pull_requests_priority(status_data, limit=None):
         remaining_limit = limit - count
         print(f"未取得PRの取得が完了しました。残り {remaining_limit} 件を更新日時順で取得します...")
         
-        prs = get_pull_requests(limit=remaining_limit, sort_by="updated", direction="desc")
+        prs = get_pull_requests(
+            limit=remaining_limit, 
+            sort_by="updated", 
+            direction="desc",
+            last_updated_at=last_updated_at
+        )
         all_prs.extend(prs)
     
     return all_prs
@@ -898,7 +903,8 @@ def fetch_pr_data(args):
     elif args.fetch_mode == "priority":
         prs = get_pull_requests_priority(
             status_data=status_data,
-            limit=limit
+            limit=limit,
+            last_updated_at=last_updated_at
         )
     else:  # "updated"モード（デフォルト）
         prs = get_pull_requests(
