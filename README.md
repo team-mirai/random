@@ -9,6 +9,7 @@
 - `.github/`: GitHubの設定ファイル（Issue・PRテンプレート、ワークフロー）
 - 各種構成ファイル: Biome, VSCode設定など
 - `pr_analysis/`: PR分析ツール（詳細は[pr_analysis/README.md](pr_analysis/README.md)を参照）
+  - `pr_analysis/merge_pr_data.py`: 複数のPRデータファイルを統合するスクリプト
 
 ## PR分析ツールの使用方法
 
@@ -43,6 +44,36 @@ python pr_analysis/pr_analyzer.py --mode fetch --fetch-mode priority
 ```
 
 これにより、まだ取得できていないPRを優先的に取得し、残りの制限数で更新されたPRを取得します。
+
+### PRデータの統合
+
+複数のディレクトリに分散したPRデータを統合するには、以下のコマンドを使用します：
+
+```
+python pr_analysis/merge_pr_data.py
+```
+
+このコマンドは、デフォルトで4つのディレクトリ（20250521_021502、20250521_034352、20250521_034935、20250521_094649）から
+`prs_data.json`ファイルを読み込み、重複を除去して一つの統合ファイル（`pr_analysis_results/merged/merged_prs_data.json`）に保存します。
+現在の統合ファイルには、PR番号1～1368の範囲から1361個のPRが含まれています（7つのPRは元のデータに含まれていません）。
+
+特定のディレクトリのみを統合する場合：
+
+```
+python pr_analysis/merge_pr_data.py --specific-dirs 20250521_034352 20250521_034935 20250521_094649
+```
+
+既存の統合ファイルを更新せず、新しいファイルを作成する場合：
+
+```
+python pr_analysis/merge_pr_data.py --no-update --output-file path/to/output.json
+```
+
+統合されたPRデータを検証するには、以下のコマンドを使用します：
+
+```
+python pr_analysis/verify_pr_data.py
+```
 
 ### 新機能: README対象PRの分類
 
