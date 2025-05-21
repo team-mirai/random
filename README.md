@@ -53,8 +53,9 @@ python pr_analysis/pr_analyzer.py --mode fetch --fetch-mode priority
 python pr_analysis/merge_pr_data.py
 ```
 
-このコマンドは、すべての`pr_analysis_results`ディレクトリから`prs_data.json`ファイルを読み込み、
-重複を除去して一つの統合ファイル（`pr_analysis_results/merged/merged_prs_data.json`）に保存します。
+このコマンドは、デフォルトで4つのディレクトリ（20250521_021502、20250521_034352、20250521_034935、20250521_094649）から
+`prs_data.json`ファイルを読み込み、重複を除去して一つの統合ファイル（`pr_analysis_results/merged/merged_prs_data.json`）に保存します。
+現在の統合ファイルには、PR番号1～1368の範囲から1361個のPRが含まれています（7つのPRは元のデータに含まれていません）。
 
 特定のディレクトリのみを統合する場合：
 
@@ -66,6 +67,12 @@ python pr_analysis/merge_pr_data.py --specific-dirs 20250521_034352 20250521_034
 
 ```
 python pr_analysis/merge_pr_data.py --no-update --output-file path/to/output.json
+```
+
+統合されたPRデータを検証するには、以下のコマンドを使用します：
+
+```
+python pr_analysis/verify_pr_data.py
 ```
 
 ### 新機能: README対象PRの分類
