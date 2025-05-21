@@ -111,6 +111,7 @@ def main():
     parser.add_argument(
         "--specific-dirs", 
         nargs="+", 
+        default=["20250521_021502", "20250521_034352", "20250521_034935", "20250521_094649"],
         help="Specific directory names to process (e.g. 20250521_034352)"
     )
     
