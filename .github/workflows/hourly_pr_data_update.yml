@@ -48,7 +48,7 @@ jobs:
         run: |
           if [ -f "random/pr_analysis_results/merged/merged_prs_data.json" ]; then
             mkdir -p policy-pr-data
-            cp random/pr_analysis_results/merged/merged_prs_data.json policy-pr-data/
+            cp random/pr_analysis_results/merged/merged_prs_data.json policy-pr-data/all_pr_data.json
             echo "Copied merged_prs_data.json to policy-pr-data repository"
           else
             echo "Error: merged_prs_data.json not found"
@@ -60,7 +60,7 @@ jobs:
           cd policy-pr-data
           git config user.name "GitHub Actions Bot"
           git config user.email "actions@github.com"
-          git add merged_prs_data.json
+          git add all_pr_data.json
 
           # 変更がある場合のみコミットする
           if git diff --staged --quiet; then
