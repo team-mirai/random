@@ -84,7 +84,8 @@ def get_headers():
     token = get_github_token()
     headers = {"Accept": "application/vnd.github.v3+json"}
     if token:
-        headers["Authorization"] = f"Bearer {token}"
+        headers["Authorization"] = f"token {token}"
+        print(f"認証ヘッダーを設定しました: {headers['Authorization'][:10]}...")
     else:
         print("警告: GitHubトークンが設定されていません。API制限が厳しく適用される可能性があります。")
     return headers
@@ -94,9 +95,17 @@ def make_github_api_request(url, params=None, retry_count=3):
     """GitHubのAPIリクエストを実行する"""
     headers = get_headers()
     
+    print(f"APIリクエスト: {url}")
+    print(f"パラメータ: {params}")
+    
     for attempt in range(retry_count):
         try:
             response = requests.get(url, headers=headers, params=params)
+            
+            print(f"レスポンスステータス: {response.status_code}")
+            for key, value in response.headers.items():
+                if key.startswith('X-') or key.lower() in ['content-type', 'server']:
+                    print(f"ヘッダー {key}: {value}")
             
             rate_limit = response.headers.get('X-RateLimit-Remaining')
             if rate_limit:
@@ -108,7 +117,24 @@ def make_github_api_request(url, params=None, retry_count=3):
                 print(f"APIレート制限に達しました。{wait_time:.0f}秒待機します...")
                 time.sleep(wait_time)
                 continue
+            
+            if response.status_code == 403:
+                print("403 Forbidden エラーが発生しました。")
+                try:
+                    error_data = response.json()
+                    print(f"エラーメッセージ: {error_data.get('message', 'なし')}")
+                    print(f"エラー詳細: {error_data.get('documentation_url', 'なし')}")
+                except:
+                    print("エラーレスポンスのJSONパースに失敗しました")
                 
+                token = get_github_token()
+                if token:
+                    print(f"トークンの長さ: {len(token)} 文字")
+                    print(f"トークンの先頭: {token[:4]}...")
+                    print(f"トークンの末尾: ...{token[-4:]}")
+                else:
+                    print("トークンが設定されていません")
+            
             response.raise_for_status()
             return response.json()
             
@@ -347,6 +373,32 @@ def main():
         if not token:
             print("GitHubトークンが設定されていないため、処理を中止します。")
             return
+        
+        try:
+            rate_limit_url = f"{API_BASE_URL}/rate_limit"
+            rate_limit_response = requests.get(rate_limit_url, headers={"Authorization": f"token {token}"})
+            if rate_limit_response.status_code == 200:
+                rate_limit_data = rate_limit_response.json()
+                core_rate = rate_limit_data.get('resources', {}).get('core', {})
+                remaining = core_rate.get('remaining', 0)
+                limit = core_rate.get('limit', 0)
+                reset_time = core_rate.get('reset', 0)
+                
+                print(f"GitHub API レート制限状況: {remaining}/{limit} リクエスト残り")
+                
+                if remaining < 10:
+                    reset_datetime = datetime.datetime.fromtimestamp(reset_time)
+                    print(f"警告: APIリクエスト数が残り少なくなっています。リセット時間: {reset_datetime}")
+                    
+                    if remaining == 0:
+                        current_time = time.time()
+                        wait_time = max(reset_time - current_time, 0) + 5
+                        if wait_time > 300:  # 5分以上の場合
+                            print(f"APIレート制限に達しています。リセットまで {wait_time/60:.1f} 分かかります。")
+                            print("処理を中断します。後でもう一度試してください。")
+                            return
+        except Exception as e:
+            print(f"レート制限情報の取得に失敗しました: {e}")
         
         result = fetch_latest_prs()
         
