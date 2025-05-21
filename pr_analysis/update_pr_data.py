@@ -388,13 +388,23 @@ def main():
                 
                 if remaining < 10:
                     reset_datetime = datetime.datetime.fromtimestamp(reset_time)
-                    print(f"警告: APIリクエスト数が残り少なくなっています。リセット時間: {reset_datetime}")
+                    reset_datetime_jst = reset_datetime + datetime.timedelta(hours=9)
+                    print(f"警告: APIリクエスト数が残り少なくなっています。リセット時間(JST): {reset_datetime_jst}")
+                    
+                    print(f"レート制限の詳細: 残り {remaining}/{limit} リクエスト")
+                    print(f"レート制限のリセット時間(UTC): {reset_datetime}")
+                    print(f"レート制限のリセット時間(JST): {reset_datetime_jst}")
                     
                     if remaining == 0:
                         current_time = time.time()
                         wait_time = max(reset_time - current_time, 0) + 5
+                        print(f"APIレート制限に達しています。リセットまで {wait_time/60:.1f} 分かかります。")
+                        
+                        print("レート制限に達した理由を調査中...")
+                        print(f"現在時刻(UTC): {datetime.datetime.utcnow()}")
+                        print(f"現在時刻(JST): {datetime.datetime.now() + datetime.timedelta(hours=9)}")
+                        
                         if wait_time > 300:  # 5分以上の場合
-                            print(f"APIレート制限に達しています。リセットまで {wait_time/60:.1f} 分かかります。")
                             print("処理を中断します。後でもう一度試してください。")
                             return
         except Exception as e:
