@@ -337,31 +337,34 @@ def merge_with_existing_data(new_prs_data):
     if os.path.exists(MERGED_FILE):
         existing_data = load_json_file(MERGED_FILE)
         print(f"既存の統合ファイルから {len(existing_data)} 件のPRを読み込みました: {MERGED_FILE}")
-
-    existing_pr_map = {pr.get("basic_info", {}).get("number"): pr for pr in existing_data if "basic_info" in pr}
-
+    
+    merged_data = existing_data.copy()
+    
+    existing_pr_numbers = {pr.get("basic_info", {}).get("number"): i 
+                          for i, pr in enumerate(merged_data) 
+                          if "basic_info" in pr and pr.get("basic_info", {}).get("number")}
+    
     new_count = 0
     update_count = 0
-
+    
     for pr in new_prs_data:
         pr_number = pr.get("basic_info", {}).get("number")
         if not pr_number:
             continue
-
-        if pr_number in existing_pr_map:
-            existing_pr_map[pr_number] = pr
+            
+        if pr_number in existing_pr_numbers:
+            idx = existing_pr_numbers[pr_number]
+            merged_data[idx] = pr
             update_count += 1
         else:
-            existing_pr_map[pr_number] = pr
+            merged_data.append(pr)
             new_count += 1
-
-    merged_data = list(existing_pr_map.values())
-
+    
     os.makedirs(MERGED_DIR, exist_ok=True)
     save_json_file(merged_data, MERGED_FILE)
-
+    
     print(f"データ統合が完了しました: 新規追加={new_count}件, 更新={update_count}件, 合計={len(merged_data)}件")
-
+    
     return len(merged_data)
 
 
