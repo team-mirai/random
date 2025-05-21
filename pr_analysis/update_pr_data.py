@@ -398,11 +398,13 @@ def main():
                     if remaining == 0:
                         current_time = time.time()
                         wait_time = max(reset_time - current_time, 0) + 5
-                        print(f"APIレート制限に達しています。リセットまで {wait_time/60:.1f} 分かかります。")
+                        print(f"APIレート制限に達しています。リセットまで {int(wait_time/60)} 分かかります。")
                         
                         print("レート制限に達した理由を調査中...")
-                        print(f"現在時刻(UTC): {datetime.datetime.now(datetime.timezone.utc)}")
-                        print(f"現在時刻(JST): {datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=9)}")
+                        utc_now = datetime.datetime.now(datetime.timezone.utc)
+                        jst_now = utc_now + datetime.timedelta(hours=9)
+                        print(f"現在時刻(UTC): {utc_now.strftime('%Y-%m-%d %H:%M:%S')}")
+                        print(f"現在時刻(JST): {jst_now.strftime('%Y-%m-%d %H:%M:%S')}")
                         
                         if wait_time > 300:  # 5分以上の場合
                             print("処理を中断します。後でもう一度試してください。")
