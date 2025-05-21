@@ -29,15 +29,53 @@ MERGED_FILE = os.path.join(MERGED_DIR, "merged_prs_data.json")
 def get_github_token():
     """環境変数からGitHubトークンを取得する"""
     token = os.environ.get("GITHUB_TOKEN")
-    if not token:
+    if token:
+        print("環境変数からGitHubトークンを取得しました")
+        return token
+    
+    token_file = os.path.expanduser("~/.github_token")
+    if os.path.exists(token_file):
         try:
-            import subprocess
-
-            result = subprocess.run(["gh", "auth", "token"], capture_output=True, text=True)
-            if result.returncode == 0:
-                token = result.stdout.strip()
+            with open(token_file, "r") as f:
+                token = f.read().strip()
+                if token:
+                    print("トークンファイルからGitHubトークンを取得しました")
+                    return token
         except Exception as e:
-            print(f"gh CLIからトークンを取得できませんでした: {e}")
+            print(f"トークンファイルからの読み込みに失敗しました: {e}")
+    
+    try:
+        import subprocess
+        result = subprocess.run(["gh", "auth", "token"], capture_output=True, text=True)
+        if result.returncode == 0:
+            token = result.stdout.strip()
+            if token:
+                print("gh CLIからGitHubトークンを取得しました")
+                return token
+    except Exception as e:
+        print(f"gh CLIからトークンを取得できませんでした: {e}")
+    
+    try:
+        print("\n警告: GitHubトークンが見つかりませんでした")
+        print("GitHubトークンを入力するか、以下のいずれかの方法でトークンを設定してください:")
+        print("1. 環境変数 GITHUB_TOKEN を設定する")
+        print("2. ~/.github_token ファイルにトークンを保存する")
+        print("3. gh CLIでログインする (gh auth login)")
+        token = input("GitHubトークンを入力してください (入力しない場合は空のままEnterを押してください): ").strip()
+        
+        if token:
+            save = input("このトークンを ~/.github_token に保存しますか？ (y/n): ").strip().lower()
+            if save == 'y':
+                try:
+                    with open(token_file, "w") as f:
+                        f.write(token)
+                    os.chmod(token_file, 0o600)  # ファイルのパーミッションを制限
+                    print(f"トークンを {token_file} に保存しました")
+                except Exception as e:
+                    print(f"トークンの保存に失敗しました: {e}")
+    except Exception as e:
+        print(f"トークン入力処理中にエラーが発生しました: {e}")
+    
     return token
 
 
@@ -46,16 +84,44 @@ def get_headers():
     token = get_github_token()
     headers = {"Accept": "application/vnd.github.v3+json"}
     if token:
-        headers["Authorization"] = f"token {token}"
+        headers["Authorization"] = f"Bearer {token}"
+    else:
+        print("警告: GitHubトークンが設定されていません。API制限が厳しく適用される可能性があります。")
     return headers
 
 
-def make_github_api_request(url, params=None):
+def make_github_api_request(url, params=None, retry_count=3):
     """GitHubのAPIリクエストを実行する"""
     headers = get_headers()
-    response = requests.get(url, headers=headers, params=params)
-    response.raise_for_status()
-    return response.json()
+    
+    for attempt in range(retry_count):
+        try:
+            response = requests.get(url, headers=headers, params=params)
+            
+            rate_limit = response.headers.get('X-RateLimit-Remaining')
+            if rate_limit:
+                print(f"API残りリクエスト数: {rate_limit}")
+            
+            if response.status_code == 429:
+                reset_time = int(response.headers.get('X-RateLimit-Reset', 0))
+                wait_time = max(reset_time - time.time(), 0) + 1
+                print(f"APIレート制限に達しました。{wait_time:.0f}秒待機します...")
+                time.sleep(wait_time)
+                continue
+                
+            response.raise_for_status()
+            return response.json()
+            
+        except requests.exceptions.RequestException as e:
+            if attempt < retry_count - 1:
+                wait_time = 2 ** attempt  # 指数バックオフ
+                print(f"APIリクエストエラー: {e}. {wait_time}秒後に再試行します... (試行 {attempt+1}/{retry_count})")
+                time.sleep(wait_time)
+            else:
+                print(f"APIリクエストが失敗しました: {e}")
+                raise
+    
+    raise Exception(f"APIリクエストが{retry_count}回失敗しました: {url}")
 
 
 def load_json_file(file_path):
@@ -276,17 +342,27 @@ def merge_with_existing_data(new_prs_data):
 def main():
     print("PR分析データ更新を開始します...")
 
-    result = fetch_latest_prs()
-
-    if result:
-        total_prs = merge_with_existing_data(result["data"])
-        print(f"PR分析データの更新が完了しました。統合ファイル内のPR総数: {total_prs}")
-    else:
-        print("新しいPRデータがないため、マージ処理をスキップします。")
-        if os.path.exists(MERGED_FILE):
-            print(f"既存の統合ファイルは維持されます: {MERGED_FILE}")
+    try:
+        token = get_github_token()
+        if not token:
+            print("GitHubトークンが設定されていないため、処理を中止します。")
+            return
+        
+        result = fetch_latest_prs()
+        
+        if result:
+            total_prs = merge_with_existing_data(result["data"])
+            print(f"PR分析データの更新が完了しました。統合ファイル内のPR総数: {total_prs}")
         else:
-            print(f"統合ファイルが存在しません: {MERGED_FILE}")
+            print("新しいPRデータがないため、マージ処理をスキップします。")
+            if os.path.exists(MERGED_FILE):
+                print(f"既存の統合ファイルは維持されます: {MERGED_FILE}")
+            else:
+                print(f"統合ファイルが存在しません: {MERGED_FILE}")
+    except Exception as e:
+        print(f"PR分析データ更新中にエラーが発生しました: {e}")
+        import traceback
+        traceback.print_exc()
 
 
 if __name__ == "__main__":
