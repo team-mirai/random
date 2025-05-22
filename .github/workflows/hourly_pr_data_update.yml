@@ -36,6 +36,11 @@ jobs:
           pip install -r pr_analysis/requirements.txt
           pip install requests tqdm
 
+      - name: Install Google Sheets API dependencies
+        run: |
+          cd policy-pr-data/scripts
+          pip install -r requirements.txt
+
       - name: Run PR data update script
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -55,13 +60,25 @@ jobs:
             exit 1
           fi
 
+      - name: Run PR stats to Google Sheets script
+        env:
+          GOOGLE_SHEETS_CREDENTIALS: ${{ secrets.GOOGLE_SHEETS_CREDENTIALS }}
+        run: |
+          cd policy-pr-data
+          # 認証情報をファイルに書き込む
+          echo "$GOOGLE_SHEETS_CREDENTIALS" > scripts/service_account_credentials.json
+          # スクリプトを実行
+          python scripts/pr_stats_to_sheets.py
+          # 認証情報ファイルを削除
+          rm scripts/service_account_credentials.json
+
       - name: Commit and push to policy-pr-data repository
         run: |
           cd policy-pr-data
           git config user.name "GitHub Actions Bot"
           git config user.email "actions@github.com"
           git add all_pr_data.json
-
+          
           # 変更がある場合のみコミットする
           if git diff --staged --quiet; then
             echo "No changes to commit"
@@ -79,7 +96,7 @@ jobs:
           git config user.name "GitHub Actions Bot"
           git config user.email "actions@github.com"
           git add pr_analysis_results/merged/merged_prs_data.json
-
+          
           # 変更がある場合のみコミットする
           if git diff --staged --quiet; then
             echo "No changes to commit for random repository"
