@@ -81,9 +81,9 @@ jobs:
           python pr_analysis/generate_label_markdown.py --input pr_analysis_results/merged/merged_prs_data.json --output-dir pr_analysis_results/label_reports
           
           # 生成したMarkdownファイルをpolicy-pr-dataにコピー
-          if [ -d "random/pr_analysis_results/label_reports" ]; then
-            mkdir -p policy-pr-data/label_reports
-            cp -r random/pr_analysis_results/label_reports/* policy-pr-data/label_reports/
+          if [ -d "pr_analysis_results/label_reports" ]; then
+            mkdir -p ../policy-pr-data/label_reports
+            cp -r pr_analysis_results/label_reports/* ../policy-pr-data/label_reports/
             echo "Copied label Markdown files to policy-pr-data repository"
           else
             echo "Warning: Label Markdown generation may have failed, continuing with workflow"
@@ -96,9 +96,12 @@ jobs:
           git config user.email "actions@github.com"
           git add all_pr_data.json
           
-          # ラベルレポートディレクトリが存在する場合はコミットに含める
-          if [ -d "label_reports" ]; then
+          # ラベルレポートディレクトリが存在し、ファイルが含まれている場合はコミットに含める
+          if [ -d "label_reports" ] && [ "$(ls -A label_reports 2>/dev/null)" ]; then
             git add label_reports/
+            echo "Added label_reports directory to commit"
+          else
+            echo "No label_reports directory or directory is empty, skipping"
           fi
           
           # 変更がある場合のみコミットする
