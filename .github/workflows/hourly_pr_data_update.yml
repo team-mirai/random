@@ -54,7 +54,7 @@ jobs:
             echo "Error: merged_prs_data.json not found"
             exit 1
           fi
-          
+
       # random repoにもデータをプッシュするステップを追加（まずmergedデータを保存）
       - name: Commit and push to random repository
         run: |
@@ -62,7 +62,7 @@ jobs:
           git config user.name "GitHub Actions Bot"
           git config user.email "actions@github.com"
           git add pr_analysis_results/merged/merged_prs_data.json
-          
+
           # 変更がある場合のみコミットする
           if git diff --staged --quiet; then
             echo "No changes to commit for random repository"
@@ -72,39 +72,66 @@ jobs:
             git push
             echo "Changes pushed to random repository"
           fi
-          
+
       # ラベルごとのMarkdown生成ステップを追加
       - name: Generate Label Markdown files
         run: |
           cd random
           mkdir -p pr_analysis_results/label_reports
           python pr_analysis/generate_label_markdown.py --input pr_analysis_results/merged/merged_prs_data.json --output-dir pr_analysis_results/label_reports
-          
+
+          # デバッグ情報を追加
+          echo "現在のディレクトリ: $(pwd)"
+          echo "ラベルレポートディレクトリの内容:"
+          ls -la pr_analysis_results/label_reports/
+
           # 生成したMarkdownファイルをpolicy-pr-dataにコピー
-          if [ -d "random/pr_analysis_results/label_reports" ]; then
-            mkdir -p policy-pr-data/label_reports
-            cp -r random/pr_analysis_results/label_reports/* policy-pr-data/label_reports/
-            echo "Copied label Markdown files to policy-pr-data repository"
+          if [ -d "pr_analysis_results/label_reports" ]; then
+            echo "コピー元ディレクトリが存在します: $(pwd)/pr_analysis_results/label_reports"
+            mkdir -p ../policy-pr-data/label_reports
+            echo "コピー先ディレクトリを作成しました: ../policy-pr-data/label_reports"
+            cp -r pr_analysis_results/label_reports/* ../policy-pr-data/label_reports/
+            echo "コピー後のディレクトリ内容:"
+            ls -la ../policy-pr-data/label_reports/
           else
-            echo "Warning: Label Markdown generation may have failed, continuing with workflow"
+            echo "エラー: コピー元ディレクトリが存在しません: $(pwd)/pr_analysis_results/label_reports"
           fi
-          
+
+      # policy-pr-dataリポジトリへのpush処理
       - name: Commit and push to policy-pr-data repository
         run: |
           cd policy-pr-data
+          echo "policy-pr-dataディレクトリの内容:"
+          ls -la
+
           git config user.name "GitHub Actions Bot"
           git config user.email "actions@github.com"
           git add all_pr_data.json
-          
-          # ラベルレポートディレクトリが存在する場合はコミットに含める
+
+          # ラベルレポートディレクトリが存在し、ファイルが含まれている場合はコミットに含める
           if [ -d "label_reports" ]; then
-            git add label_reports/
+            echo "label_reportsディレクトリが存在します: $(pwd)/label_reports"
+            echo "ディレクトリ内容:"
+            ls -la label_reports/
+            
+            if [ "$(ls -A label_reports 2>/dev/null)" ]; then
+              echo "ディレクトリに内容があります、git addを実行します"
+              git add label_reports/
+              echo "git addの状態:"
+              git status
+            else
+              echo "ディレクトリは空です、スキップします"
+            fi
+          else
+            echo "label_reportsディレクトリが存在しません: $(pwd)/label_reports"
           fi
-          
+
           # 変更がある場合のみコミットする
           if git diff --staged --quiet; then
-            echo "No changes to commit"
+            echo "コミットする変更はありません"
           else
+            echo "コミットする変更があります:"
+            git diff --staged --name-status
             timestamp=$(date '+%Y-%m-%d %H:%M:%S')
             git commit -m "Update PR data and label Markdown files - ${timestamp}"
             git push
