@@ -81,27 +81,45 @@ class ContentClassifier:
 
         return "\n\n".join(texts)
 
-    def _analyze_with_openrouter(self, content):
-        """OpenRouter APIを使用してコンテンツを分析する"""
+    def _analyze_with_openrouter(self, text):
+        """OpenRouter APIを使用してテキストを分析し、最も適切なカテゴリを判定する"""
+        categories = [
+            "教育",
+            "経済財政",
+            "科学技術",
+            "デジタル民主主義",
+            "医療",
+            "子育て",
+            "ビジョン",
+            "産業政策",
+            "行政改革",
+            "その他政策",
+            "エネルギー",
+            "システム",
+        ]
+
         url = "https://openrouter.ai/api/v1/chat/completions"
 
-        file_names = [str(f.relative_to(self.repo_root)) for f in self.existing_files]
-
         prompt = f"""
-        あなたはPull Requestの内容を分析し、最も関連性の高いファイルに分類するアシスタントです。
-        以下のPRの内容を分析して、最も関連性の高いマークダウンファイルを選択してください。
-        どのファイルにも関連性がない場合は「分類不能」と判断してください。
-        
-        {content}
-        
-        {", ".join(file_names)}
-        
-        JSONフォーマットで以下の内容を返してください:
-        {{
-          "category": "ファイル名または「分類不能」",
-          "confidence": 0～1の数値（信頼度）,
-          "explanation": "分類理由の簡潔な説明"
-        }}
+あなたはPull Request (PR)の内容を分析し、最も適切なラベルカテゴリに分類する専門家です。
+以下のPRの内容を分析し、最も適切なカテゴリを選択してください。
+
+選択可能なカテゴリ:
+{", ".join(categories)}
+
+PRの内容:
+{text}
+
+以下の形式でJSON形式で回答してください。
+{{
+  "digest": "PRの3行説明(3文で)",
+  "title": "内容を簡潔に表現したタイトル",
+  "category": "最も適切なカテゴリの提案（上記のいずれかを選択）",
+  "confidence": 0.0〜1.0の数値（確信度）,
+  "explanation": "そのカテゴリの提案をした理由の説明"
+}}
+
+適切なカテゴリがない場合は "分類不能" としてください。
         """
 
         headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}

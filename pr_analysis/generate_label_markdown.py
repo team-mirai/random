@@ -3,12 +3,17 @@
 import argparse
 import json
 import os
+import random
 from collections import defaultdict
 from pathlib import Path
 
+from content_classifier import ContentClassifier
+from tqdm import tqdm
+
+
 def load_pr_data(json_file_path):
     """PRデータをJSONファイルから読み込む"""
-    with open(json_file_path, 'r', encoding='utf-8') as f:
+    with open(json_file_path, encoding='utf-8') as f:
         pr_data = json.load(f)
     print(f"{len(pr_data)}件のPRデータを読み込みました")
     return pr_data
@@ -95,10 +100,46 @@ def generate_label_index(label_to_prs, output_dir):
     print(f"ラベルインデックスを {output_path} に保存しました")
     return output_path
 
+def classify_unlabeled_prs(unlabeled_prs, sample_size=0, confidence_threshold=0.7):
+    """ラベルなしのPRを内容に基づいて既存のカテゴリに分類する"""
+    if sample_size > 0 and sample_size < len(unlabeled_prs):
+        print(f"{len(unlabeled_prs)}件のラベルなしPRから{sample_size}件をランダムに選択します")
+        prs_to_classify = random.sample(unlabeled_prs, sample_size)
+    else:
+        print(f"{len(unlabeled_prs)}件のラベルなしPRを分類します")
+        prs_to_classify = unlabeled_prs
+    
+    try:
+        classifier = ContentClassifier()
+        
+        classified_prs = {}
+        still_unlabeled = []
+        
+        for pr in tqdm(prs_to_classify, desc="PRの分類"):
+            classification = classifier.classify_content(pr)
+            category = classification.get("category", "分類不能")
+            confidence = classification.get("confidence", 0.0)
+            
+            if category == "分類不能" or confidence < confidence_threshold:
+                still_unlabeled.append(pr)
+                continue
+                
+            if category not in classified_prs:
+                classified_prs[category] = []
+            classified_prs[category].append(pr)
+            
+        return classified_prs, still_unlabeled
+    except Exception as e:
+        print(f"分類中にエラーが発生しました: {e}")
+        return {}, unlabeled_prs
+
 def main():
     parser = argparse.ArgumentParser(description='PRデータをラベルごとにグループ化してMarkdownを生成する')
     parser.add_argument('--input', default='all_pr_data.json', help='入力JSONファイルのパス')
     parser.add_argument('--output-dir', default='label_reports', help='出力ディレクトリ')
+    parser.add_argument('--classify-unlabeled', action='store_true', help='ラベルなしのPRを既存のカテゴリに分類する')
+    parser.add_argument('--sample', type=int, default=0, help='ラベルなしのPRからサンプリングする数（0は全て）')
+    parser.add_argument('--confidence-threshold', type=float, default=0.7, help='分類の信頼度のしきい値（0.0〜1.0）')
     args = parser.parse_args()
     
     input_path = Path(args.input)
@@ -112,6 +153,59 @@ def main():
     pr_data = load_pr_data(input_path)
     
     label_to_prs = group_prs_by_label(pr_data)
+    
+    if args.classify_unlabeled and 'ラベルなし' in label_to_prs:
+        unlabeled_prs = label_to_prs.pop('ラベルなし')
+        classified_prs, still_unlabeled = classify_unlabeled_prs(
+            unlabeled_prs, 
+            sample_size=args.sample,
+            confidence_threshold=args.confidence_threshold
+        )
+        
+        for category, prs in classified_prs.items():
+            if category not in label_to_prs:
+                label_to_prs[category] = []
+            label_to_prs[category].extend(prs)
+            
+        if still_unlabeled:
+            label_to_prs['ラベルなし'] = still_unlabeled
+            
+        print("\n分類結果の概要:")
+        print(f"- 元のラベルなしPR: {len(unlabeled_prs)}件")
+        print(f"- 自動分類されたPR: {sum(len(prs) for prs in classified_prs.values())}件")
+        print(f"- 分類できなかったPR: {len(still_unlabeled)}件")
+        
+        for category, prs in sorted(classified_prs.items(), key=lambda x: len(x[1]), reverse=True):
+            print(f"  - {category}: {len(prs)}件")
+            
+        if args.sample > 0:
+            print("\n詳細な分類結果:")
+            for category, prs in sorted(classified_prs.items(), key=lambda x: len(x[1]), reverse=True):
+                print(f"\n== {category} ==")
+                for pr in prs:
+                    print(f"- #{pr['basic_info']['number']} {pr['basic_info']['title']}")
+                    
+        classification_summary_path = os.path.join(output_dir, "unlabeled_classification_summary.md")
+        
+        with open(classification_summary_path, 'w', encoding='utf-8') as f:
+            f.write("# ラベルなしPRの分類結果\n\n")
+            f.write(f"元のラベルなしPR: {len(unlabeled_prs)}件\n")
+            f.write(f"自動分類されたPR: {sum(len(prs) for prs in classified_prs.values())}件\n")
+            f.write(f"分類できなかったPR: {len(still_unlabeled)}件\n\n")
+            
+            f.write("## カテゴリ別の分類結果\n\n")
+            f.write("| カテゴリ | PR数 |\n")
+            f.write("|---------|------|\n")
+            
+            for category, prs in sorted(classified_prs.items(), key=lambda x: len(x[1]), reverse=True):
+                f.write(f"| {category} | {len(prs)} |\n")
+                
+            for category, prs in sorted(classified_prs.items(), key=lambda x: len(x[1]), reverse=True):
+                f.write(f"\n### {category}\n\n")
+                for pr in prs:
+                    f.write(f"- [#{pr['basic_info']['number']} {pr['basic_info']['title']}]({pr['basic_info']['html_url']})\n")
+                
+        print(f"分類結果の要約を {classification_summary_path} に保存しました")
     
     for label_name, prs in label_to_prs.items():
         generate_label_markdown(label_name, prs, output_dir)

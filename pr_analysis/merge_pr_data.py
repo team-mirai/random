@@ -8,12 +8,10 @@ PR分析データ統合スクリプト
 """
 
 import argparse
-import json
-import os
 import glob
-from datetime import datetime
+import json
 import logging
-from pathlib import Path
+import os
 
 logging.basicConfig(
     level=logging.INFO,
@@ -25,7 +23,7 @@ logger = logging.getLogger(__name__)
 def load_json_file(file_path):
     """JSONファイルを読み込む"""
     try:
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             return json.load(f)
     except Exception as e:
         logger.error(f"Error loading {file_path}: {e}")

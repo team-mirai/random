@@ -13,7 +13,7 @@ def main():
     merged_file = os.path.join(repo_root, "pr_analysis_results", "merged", "merged_prs_data.json")
 
     try:
-        with open(merged_file, "r", encoding="utf-8") as f:
+        with open(merged_file, encoding="utf-8") as f:
             data = json.load(f)
 
         total_prs = len(data)

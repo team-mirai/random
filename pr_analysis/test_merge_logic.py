@@ -8,13 +8,14 @@
 import json
 import os
 
+
 def test_merge_logic():
     """マージロジックのテスト"""
     merged_file = "pr_analysis_results/merged/merged_prs_data.json"
     
     current_data = []
     if os.path.exists(merged_file):
-        with open(merged_file, "r", encoding="utf-8") as f:
+        with open(merged_file, encoding="utf-8") as f:
             current_data = json.load(f)
     
     current_count = len(current_data)
