@@ -6,12 +6,14 @@ import os
 import random
 from collections import defaultdict
 from pathlib import Path
-from tqdm import tqdm
+
 from content_classifier import ContentClassifier
+from tqdm import tqdm
+
 
 def load_pr_data(json_file_path):
     """PRデータをJSONファイルから読み込む"""
-    with open(json_file_path, 'r', encoding='utf-8') as f:
+    with open(json_file_path, encoding='utf-8') as f:
         pr_data = json.load(f)
     print(f"{len(pr_data)}件のPRデータを読み込みました")
     return pr_data
@@ -168,7 +170,7 @@ def main():
         if still_unlabeled:
             label_to_prs['ラベルなし'] = still_unlabeled
             
-        print(f"\n分類結果の概要:")
+        print("\n分類結果の概要:")
         print(f"- 元のラベルなしPR: {len(unlabeled_prs)}件")
         print(f"- 自動分類されたPR: {sum(len(prs) for prs in classified_prs.values())}件")
         print(f"- 分類できなかったPR: {len(still_unlabeled)}件")
