@@ -8,14 +8,14 @@ PR分析データ更新スクリプト
 このスクリプトを実行するだけで、merged_prs_data.jsonが最新のデータに更新されます。
 """
 
-import os
-import json
-import datetime
-import requests
-import time
-import glob
-from pathlib import Path
 import concurrent.futures
+import datetime
+import json
+import os
+import time
+from pathlib import Path
+
+import requests
 from tqdm import tqdm
 
 API_BASE_URL = "https://api.github.com"
@@ -36,7 +36,7 @@ def get_github_token():
     token_file = os.path.expanduser("~/.github_token")
     if os.path.exists(token_file):
         try:
-            with open(token_file, "r") as f:
+            with open(token_file) as f:
                 token = f.read().strip()
                 if token:
                     print("トークンファイルからGitHubトークンを取得しました")
@@ -124,7 +124,7 @@ def make_github_api_request(url, params=None, retry_count=3):
                     error_data = response.json()
                     print(f"エラーメッセージ: {error_data.get('message', 'なし')}")
                     print(f"エラー詳細: {error_data.get('documentation_url', 'なし')}")
-                except:
+                except json.JSONDecodeError:
                     print("エラーレスポンスのJSONパースに失敗しました")
                 
                 token = get_github_token()
@@ -153,7 +153,7 @@ def make_github_api_request(url, params=None, retry_count=3):
 def load_json_file(file_path):
     """JSONファイルを読み込む"""
     try:
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             return json.load(f)
     except Exception as e:
         print(f"Error loading {file_path}: {e}")
@@ -404,7 +404,7 @@ def main():
                         print(f"APIレート制限に達しています。リセットまで {int(wait_time/60)} 分かかります。")
                         
                         print("レート制限に達した理由を調査中...")
-                        utc_now = datetime.datetime.now(datetime.timezone.utc)
+                        utc_now = datetime.datetime.now(datetime.UTC)
                         jst_now = utc_now + datetime.timedelta(hours=9)
                         print(f"現在時刻(UTC): {utc_now.strftime('%Y-%m-%d %H:%M:%S')}")
                         print(f"現在時刻(JST): {jst_now.strftime('%Y-%m-%d %H:%M:%S')}")

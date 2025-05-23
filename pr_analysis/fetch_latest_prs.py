@@ -5,13 +5,14 @@
 前回の更新以降に更新されたPRを取得し、タイムスタンプ付きフォルダに保存します。
 """
 
-import os
-import json
+import concurrent.futures
 import datetime
-import requests
+import json
+import os
 import time
 from pathlib import Path
-import concurrent.futures
+
+import requests
 from tqdm import tqdm
 
 API_BASE_URL = "https://api.github.com"

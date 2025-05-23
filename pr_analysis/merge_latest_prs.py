@@ -5,10 +5,9 @@
 最新のPRデータと既存のmerged_prs_data.jsonを統合し、新しいmerged_prs_data.jsonを作成します。
 """
 
-import os
-import json
 import glob
-from pathlib import Path
+import json
+import os
 
 BASE_DIR = "pr_analysis_results"
 MERGED_DIR = os.path.join(BASE_DIR, "merged")
@@ -17,7 +16,7 @@ MERGED_FILE = os.path.join(MERGED_DIR, "merged_prs_data.json")
 def load_json_file(file_path):
     """JSONファイルを読み込む"""
     try:
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             return json.load(f)
     except Exception as e:
         print(f"Error loading {file_path}: {e}")

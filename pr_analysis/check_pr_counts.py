@@ -5,14 +5,13 @@ PRデータファイルの数を確認するスクリプト
 
 import json
 import os
-import glob
 from pathlib import Path
 
 
 def count_prs_in_file(file_path):
     """ファイル内のPR数を数える"""
     try:
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             data = json.load(f)
             return len(data)
     except Exception as e:
@@ -39,7 +38,7 @@ def main():
     print(f"統合ファイル: {merged_count} PRs")
 
     if merged_count > 0:
-        with open(merged_file, "r", encoding="utf-8") as f:
+        with open(merged_file, encoding="utf-8") as f:
             data = json.load(f)
             pr_numbers = [pr.get("basic_info", {}).get("number", 0) for pr in data if "basic_info" in pr]
             if pr_numbers:

@@ -44,7 +44,7 @@ def observe_merge_data():
 
     # 各PRの基本情報を表示
     print("\n各PRの基本情報サンプル (先頭3件):")
-    for i, pr_number in enumerate(pr_numbers[:3]):
+    for _i, pr_number in enumerate(pr_numbers[:3]):
         pr = existing_pr_map[pr_number]
         basic_info = pr.get("basic_info", {})
         print(f"\n--- PR #{pr_number} ---")
