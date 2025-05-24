@@ -61,13 +61,13 @@ jobs:
           cd random
           git config user.name "GitHub Actions Bot"
           git config user.email "actions@github.com"
-          git add pr_analysis_results/merged/merged_prs_data.json
+          git add pr_analysis_results/merged/merged_prs_data.json pr_analysis_results/last_run_info.json
 
           # 変更がある場合のみコミットする
           if git diff --staged --quiet; then
             echo "No changes to commit for random repository"
           else
-            timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+            timestamp=$(TZ=Asia/Tokyo date '+%Y-%m-%d %H:%M:%S JST')
             git commit -m "Update merged_prs_data.json - ${timestamp}"
             git push
             echo "Changes pushed to random repository"
@@ -132,7 +132,7 @@ jobs:
           else
             echo "コミットする変更があります:"
             git diff --staged --name-status
-            timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+            timestamp=$(TZ=Asia/Tokyo date '+%Y-%m-%d %H:%M:%S JST')
             git commit -m "Update PR data and label Markdown files - ${timestamp}"
             git push
             echo "Changes pushed to policy-pr-data repository"
