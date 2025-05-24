@@ -61,7 +61,7 @@ jobs:
           cd random
           git config user.name "GitHub Actions Bot"
           git config user.email "actions@github.com"
-          git add pr_analysis_results/merged/merged_prs_data.json
+          git add pr_analysis_results/merged/merged_prs_data.json pr_analysis_results/last_run_info.json
 
           # 変更がある場合のみコミットする
           if git diff --staged --quiet; then
