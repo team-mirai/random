@@ -5,13 +5,13 @@ of the manifest that are being modified. This script can identify which PRs modi
 the same sections of the manifest.
 """
 
+import argparse
 import json
 import os
 import re
 import subprocess
-import sys
-import argparse
 from collections import defaultdict
+
 
 def run_command(command):
     """Run a shell command and return the output."""
@@ -81,7 +81,7 @@ def extract_markdown_sections(file_path):
         print(f"File not found: {file_path}")
         return {}
     
-    with open(file_path, 'r', encoding='utf-8') as f:
+    with open(file_path, encoding='utf-8') as f:
         content = f.read()
     
     print(f"Extracting sections from file with {len(content.split('\n'))} lines")
@@ -169,7 +169,7 @@ def extract_markdown_sections(file_path):
 
 def find_section_for_line(sections, line_number):
     """Find the section that contains a specific line."""
-    for section_line, section_info in sections.items():
+    for _section_line, section_info in sections.items():
         if section_info["start_line"] <= line_number <= section_info["end_line"]:
             return section_info
     
@@ -195,7 +195,7 @@ def extract_line_numbers_from_diff(diff_text):
             match = re.search(r'@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@', line)
             if match:
                 current_line = int(match.group(1))
-                line_count = int(match.group(2)) if match.group(2) else 1
+                # Get line count but not used
         elif current_line is not None:
             if line.startswith('+') and not line.startswith('+++'):
                 line_numbers.append(current_line)
@@ -374,7 +374,7 @@ def main():
         if args.format == 'json':
             output = json.dumps({
                 'results': all_results,
-                'section_to_prs': {k: v for k, v in section_to_prs.items()}
+                'section_to_prs': dict(section_to_prs)
             }, indent=2, ensure_ascii=False)
         else:
             output = generate_report(all_results, section_to_prs)
