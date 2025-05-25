@@ -7,9 +7,11 @@ import argparse
 import json
 import os
 import re
-import requests
 from collections import defaultdict
 from datetime import datetime
+
+import requests
+
 
 def get_label_file_patterns():
     """Get mapping of labels to file patterns based on config.ts"""
@@ -31,7 +33,7 @@ def load_pr_data(file_path='all_pr_data.json'):
     """Load PR data from JSON file."""
     print(f"Loading PR data from {file_path}...")
     try:
-        with open(file_path, 'r', encoding='utf-8') as f:
+        with open(file_path, encoding='utf-8') as f:
             all_prs = json.load(f)
         print(f"Loaded {len(all_prs)} PRs")
         return all_prs
@@ -43,7 +45,7 @@ def get_labeled_prs(all_prs, label):
     """Get all PRs with the specified label."""
     labeled_prs = []
     for pr in all_prs:
-        pr_labels = [l.get('name') for l in pr.get('labels', [])]
+        pr_labels = [label_obj.get('name') for label_obj in pr.get('labels', [])]
         if label in pr_labels:
             labeled_prs.append(pr)
     
@@ -106,7 +108,7 @@ def extract_markdown_sections(content):
     section_hierarchy = {}
     section_path = []
     
-    for i, (line_num, level, title) in enumerate(headings):
+    for _i, (line_num, level, title) in enumerate(headings):
         while section_path and section_path[-1][1] >= level:
             section_path.pop()
         
