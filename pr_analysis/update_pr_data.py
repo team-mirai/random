@@ -404,7 +404,7 @@ def main():
                         print(f"APIレート制限に達しています。リセットまで {int(wait_time/60)} 分かかります。")
                         
                         print("レート制限に達した理由を調査中...")
-                        utc_now = datetime.datetime.now(datetime.UTC)
+                        utc_now = datetime.datetime.now(datetime.timezone.utc)
                         jst_now = utc_now + datetime.timedelta(hours=9)
                         print(f"現在時刻(UTC): {utc_now.strftime('%Y-%m-%d %H:%M:%S')}")
                         print(f"現在時刻(JST): {jst_now.strftime('%Y-%m-%d %H:%M:%S')}")
