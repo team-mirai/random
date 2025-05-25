@@ -20,7 +20,8 @@ class ContentClassifier:
         """
         self.api_key = api_key or os.environ.get("OPENROUTER_API_KEY")
         if not self.api_key:
-            raise ValueError("OpenRouter APIキーが設定されていません。環境変数OPENROUTER_API_KEYを設定してください。")
+            print("警告: OpenRouter APIキーが設定されていません。コンテンツ分類機能は無効になります。")
+            self.api_key = None
 
         self.repo_root = Path(repo_root) if repo_root else Path(__file__).parent.parent
         self.existing_files = self._get_existing_files()

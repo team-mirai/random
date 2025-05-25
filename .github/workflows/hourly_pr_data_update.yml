@@ -78,7 +78,7 @@ jobs:
         run: |
           cd random
           mkdir -p pr_analysis_results/label_reports
-          python pr_analysis/generate_label_markdown.py --input pr_analysis_results/merged/merged_prs_data.json --output-dir pr_analysis_results/label_reports
+          python pr_analysis/generate_label_markdown.py --input pr_analysis_results/merged/merged_prs_data.json --output-dir pr_analysis_results/label_reports --classify-unlabeled
 
           # デバッグ情報を追加
           echo "現在のディレクトリ: $(pwd)"
