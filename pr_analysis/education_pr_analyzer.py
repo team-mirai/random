@@ -46,13 +46,14 @@ def extract_markdown_sections(file_path):
     with open(file_path, encoding='utf-8') as f:
         content = f.read()
     
-    print(f"Extracting sections from file with {len(content.split('\n'))} lines")
+    lines = content.split('\n')
+    print(f"Extracting sections from file with {len(lines)} lines")
     
     headings = []
     section_content = {}
     current_section_start = None
     
-    for i, line in enumerate(content.split('\n')):
+    for i, line in enumerate(lines):
         heading_match = re.match(r'^(#+)\s+(.+)$', line)
         
         jp_section_match = None
@@ -93,8 +94,8 @@ def extract_markdown_sections(file_path):
                 section_content[current_section_start] = (current_section_start, i)
             current_section_start = i+1
     
-    if current_section_start is not None and len(content.split('\n')) > 0:
-        section_content[current_section_start] = (current_section_start, len(content.split('\n')))
+    if current_section_start is not None and len(lines) > 0:
+        section_content[current_section_start] = (current_section_start, len(lines))
     
     sections = {}
     
