@@ -244,12 +244,24 @@ def get_pull_requests(last_updated_at=None, state="all"):
     return all_prs
 
 
+def get_pr_labels(pr_number):
+    """PRのラベル情報を取得する"""
+    url = f"{API_BASE_URL}/repos/{REPO_OWNER}/{REPO_NAME}/issues/{pr_number}/labels"
+    return make_github_api_request(url)
+
+
 def get_pr_details(pr_number):
     """PRの詳細情報を取得する"""
     url = f"{API_BASE_URL}/repos/{REPO_OWNER}/{REPO_NAME}/pulls/{pr_number}"
     pr_data = make_github_api_request(url)
 
     pr_details = {"basic_info": pr_data, "state": pr_data["state"], "updated_at": pr_data["updated_at"]}
+
+    try:
+        pr_details["labels"] = get_pr_labels(pr_number)
+    except Exception as e:
+        print(f"PR #{pr_number} のラベル取得中にエラーが発生しました: {e}")
+        pr_details["labels"] = []
 
     try:
         url = f"{API_BASE_URL}/repos/{REPO_OWNER}/{REPO_NAME}/issues/{pr_number}/comments"
