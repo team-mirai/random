@@ -3,11 +3,12 @@
 ラベル数の検証スクリプト
 """
 
-import json
 import sys
+
 sys.path.append('/home/ubuntu/repos/random/pr_analysis')
 from generate_label_markdown import group_prs_by_label
-from update_pr_data import load_json_file, MERGED_FILE
+from update_pr_data import MERGED_FILE, load_json_file
+
 
 def main():
     print(f"データを読み込んでいます: {MERGED_FILE}")

@@ -8,15 +8,11 @@
 """
 
 import concurrent.futures
-import json
 import os
 import time
-from pathlib import Path
+
 from tqdm import tqdm
-from update_pr_data import (
-    get_pr_details, load_json_file, save_json_file, 
-    get_github_token, MERGED_FILE, MERGED_DIR
-)
+from update_pr_data import MERGED_FILE, get_github_token, get_pr_details, load_json_file, save_json_file
 
 
 def identify_prs_missing_labels(pr_data):
