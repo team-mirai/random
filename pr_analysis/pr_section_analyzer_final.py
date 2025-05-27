@@ -24,7 +24,10 @@ def run_command(command):
 
 def get_pr_list(limit=100):
     """Get a list of PRs from the repository."""
-    command = f"gh pr list --limit {limit} --json number,title,headRefName,state,url"
+    if limit is None or limit == 0:
+        command = "gh pr list --json number,title,headRefName,state,url"
+    else:
+        command = f"gh pr list --limit {limit} --json number,title,headRefName,state,url"
     output = run_command(command)
     try:
         return json.loads(output)
@@ -277,7 +280,8 @@ def analyze_pr(pr_number):
 
 def analyze_all_prs(limit=100):
     """Analyze all PRs and group them by the sections they modify."""
-    prs = get_pr_list(limit)
+    effective_limit = None if limit == 0 else limit
+    prs = get_pr_list(effective_limit)
     
     all_results = []
     section_to_prs = defaultdict(list)
@@ -369,7 +373,8 @@ def main():
         else:
             output = f"No markdown sections found in PR #{args.pr}"
     else:  # --all
-        all_results, section_to_prs = analyze_all_prs(args.limit)
+        effective_limit = None if args.limit == 0 else args.limit
+        all_results, section_to_prs = analyze_all_prs(effective_limit)
         
         if args.format == 'json':
             output = json.dumps({
