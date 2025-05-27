@@ -63,12 +63,18 @@ jobs:
           git config user.email "actions@github.com"
           git add pr_analysis_results/merged/merged_prs_data.json pr_analysis_results/last_run_info.json
 
+          # セクションレポートが存在する場合はコミットに含める
+          if [ -d "pr_analysis_results/section_reports" ] && [ "$(ls -A pr_analysis_results/section_reports 2>/dev/null)" ]; then
+            echo "セクションレポートをコミットに含めます"
+            git add pr_analysis_results/section_reports/
+          fi
+
           # 変更がある場合のみコミットする
           if git diff --staged --quiet; then
             echo "No changes to commit for random repository"
           else
             timestamp=$(TZ=Asia/Tokyo date '+%Y-%m-%d %H:%M:%S JST')
-            git commit -m "Update merged_prs_data.json - ${timestamp}"
+            git commit -m "Update PR data and reports - ${timestamp}"
             git push
             echo "Changes pushed to random repository"
           fi
@@ -95,6 +101,32 @@ jobs:
             ls -la ../policy-pr-data/label_reports/
           else
             echo "エラー: コピー元ディレクトリが存在しません: $(pwd)/pr_analysis_results/label_reports"
+          fi
+          
+      # セクション分析レポート生成ステップを追加
+      - name: Generate Section Analysis Report
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd random
+          mkdir -p pr_analysis_results/section_reports
+          python pr_analysis/pr_section_analyzer_final.py --all --limit 0 --output pr_analysis_results/section_reports/section_report.md
+          
+          # デバッグ情報を追加
+          echo "現在のディレクトリ: $(pwd)"
+          echo "セクションレポートディレクトリの内容:"
+          ls -la pr_analysis_results/section_reports/
+          
+          # 生成したMarkdownファイルをpolicy-pr-dataにコピー
+          if [ -d "pr_analysis_results/section_reports" ]; then
+            echo "コピー元ディレクトリが存在します: $(pwd)/pr_analysis_results/section_reports"
+            mkdir -p ../policy-pr-data/section_reports
+            echo "コピー先ディレクトリを作成しました: ../policy-pr-data/section_reports"
+            cp -r pr_analysis_results/section_reports/* ../policy-pr-data/section_reports/
+            echo "コピー後のディレクトリ内容:"
+            ls -la ../policy-pr-data/section_reports/
+          else
+            echo "エラー: コピー元ディレクトリが存在しません: $(pwd)/pr_analysis_results/section_reports"
           fi
 
       # policy-pr-dataリポジトリへのpush処理
@@ -125,6 +157,24 @@ jobs:
           else
             echo "label_reportsディレクトリが存在しません: $(pwd)/label_reports"
           fi
+          
+          # セクションレポートディレクトリが存在し、ファイルが含まれている場合はコミットに含める
+          if [ -d "section_reports" ]; then
+            echo "section_reportsディレクトリが存在します: $(pwd)/section_reports"
+            echo "ディレクトリ内容:"
+            ls -la section_reports/
+            
+            if [ "$(ls -A section_reports 2>/dev/null)" ]; then
+              echo "ディレクトリに内容があります、git addを実行します"
+              git add section_reports/
+              echo "git addの状態:"
+              git status
+            else
+              echo "ディレクトリは空です、スキップします"
+            fi
+          else
+            echo "section_reportsディレクトリが存在しません: $(pwd)/section_reports"
+          fi
 
           # 変更がある場合のみコミットする
           if git diff --staged --quiet; then
@@ -133,7 +183,7 @@ jobs:
             echo "コミットする変更があります:"
             git diff --staged --name-status
             timestamp=$(TZ=Asia/Tokyo date '+%Y-%m-%d %H:%M:%S JST')
-            git commit -m "Update PR data and label Markdown files - ${timestamp}"
+            git commit -m "Update PR data, label and section reports - ${timestamp}"
             git push
             echo "Changes pushed to policy-pr-data repository"
           fi
