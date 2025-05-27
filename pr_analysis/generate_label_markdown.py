@@ -25,15 +25,26 @@ def group_prs_by_label(pr_data):
     for pr in pr_data:
         if not pr:  # Noneの場合はスキップ
             continue
-            
-        if not pr.get('labels'):
+        
+        has_labels = False
+        
+        if pr.get('labels'):
+            has_labels = True
+            for label in pr.get('labels', []):
+                label_name = label.get('name')
+                if label_name:
+                    label_to_prs[label_name].append(pr)
+        
+        if 'basic_info' in pr and pr['basic_info'].get('labels'):
+            has_labels = True
+            for label in pr['basic_info']['labels']:
+                label_name = label.get('name')
+                if label_name:
+                    if pr not in label_to_prs[label_name]:
+                        label_to_prs[label_name].append(pr)
+        
+        if not has_labels:
             label_to_prs['ラベルなし'].append(pr)
-            continue
-            
-        for label in pr.get('labels', []):
-            label_name = label.get('name')
-            if label_name:
-                label_to_prs[label_name].append(pr)
     
     return label_to_prs
 
