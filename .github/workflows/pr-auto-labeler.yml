@@ -36,4 +36,4 @@ jobs:
           REPO_NAME: random
         run: |
           cd random/pr-auto-labeler
-          npx ts-node src/index.ts
+          npx ts-node --esm src/index.ts
