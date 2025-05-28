@@ -35,15 +35,19 @@ jobs:
           pip install -r pr_analysis/requirements.txt
           pip install requests tqdm
 
-      - name: Download latest PR data
+      - name: Verify PR data exists
         run: |
           cd random
-          # Download the latest merged PR data from policy-pr-data repo
-          curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-               -H "Accept: application/vnd.github.v3.raw" \
-               -o pr_analysis_results/merged/merged_prs_data.json \
-               https://api.github.com/repos/team-mirai/policy-pr-data/contents/all_pr_data.json
-          echo "Downloaded latest PR data"
+          # Create directory structure if needed
+          mkdir -p pr_analysis_results/merged
+          # Check if merged PR data exists
+          if [ -f "pr_analysis_results/merged/merged_prs_data.json" ]; then
+            echo "Found existing PR data file"
+            ls -la pr_analysis_results/merged/merged_prs_data.json
+          else
+            echo "Error: merged_prs_data.json not found. Please run the hourly PR data update workflow first."
+            exit 1
+          fi
 
       - name: Generate AI Classification Report for README PRs
         env:
