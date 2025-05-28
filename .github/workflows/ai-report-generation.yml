@@ -1,0 +1,91 @@
+name: AI Report Generation
+
+on:
+  workflow_dispatch: # 手動実行
+    inputs:
+      sample_size:
+        description: 'Number of PRs to sample for classification (0 = all)'
+        required: false
+        default: '0'
+      confidence_threshold:
+        description: 'Confidence threshold for classification (0.0-1.0)'
+        required: false
+        default: '0.7'
+
+jobs:
+  generate-ai-report:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout random repository
+        uses: actions/checkout@v3
+        with:
+          repository: team-mirai/random
+          token: ${{ secrets.GH_TOKEN }}
+          path: random
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          cd random
+          pip install -r pr_analysis/requirements.txt
+          pip install requests tqdm
+
+      - name: Download latest PR data
+        run: |
+          cd random
+          # Download the latest merged PR data from policy-pr-data repo
+          curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+               -H "Accept: application/vnd.github.v3.raw" \
+               -o pr_analysis_results/merged/merged_prs_data.json \
+               https://api.github.com/repos/team-mirai/policy-pr-data/contents/all_pr_data.json
+          echo "Downloaded latest PR data"
+
+      - name: Generate AI Classification Report for README PRs
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd random
+          mkdir -p pr_analysis_results/ai_reports
+          python pr_analysis/pr_analyzer.py \
+            --mode report \
+            --classify-readme \
+            --input-json pr_analysis_results/merged/merged_prs_data.json \
+            --output-dir pr_analysis_results/ai_reports
+          echo "AI classification report generated"
+
+      - name: Generate Label-based Reports with AI Classification
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          cd random
+          mkdir -p pr_analysis_results/ai_label_reports
+          python pr_analysis/generate_label_markdown.py \
+            --input pr_analysis_results/merged/merged_prs_data.json \
+            --output-dir pr_analysis_results/ai_label_reports \
+            --classify-unlabeled \
+            --sample ${{ github.event.inputs.sample_size || '0' }} \
+            --confidence-threshold ${{ github.event.inputs.confidence_threshold || '0.7' }}
+          echo "Label-based AI classification reports generated"
+
+      - name: Commit and push AI reports
+        run: |
+          cd random
+          git config user.name "GitHub Actions Bot"
+          git config user.email "actions@github.com"
+          git add pr_analysis_results/ai_reports/ pr_analysis_results/ai_label_reports/
+
+          # 変更がある場合のみコミットする
+          if git diff --staged --quiet; then
+            echo "No new AI reports to commit"
+          else
+            timestamp=$(TZ=Asia/Tokyo date '+%Y-%m-%d %H:%M:%S JST')
+            git commit -m "Generate AI classification reports - ${timestamp}"
+            git push
+            echo "AI reports pushed to repository"
+          fi
