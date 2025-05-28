@@ -1,0 +1,39 @@
+name: PR Auto Labeler
+
+on:
+  schedule:
+    # 毎日午前0時に実行（UTC時間）
+    - cron: "0 0 * * *"
+  workflow_dispatch: # 手動実行も可能にする
+
+jobs:
+  auto-label-prs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          repository: team-mirai/random
+          token: ${{ secrets.GH_TOKEN }}
+          path: random
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: random/pr-auto-labeler/package.json
+
+      - name: Install dependencies
+        run: |
+          cd random/pr-auto-labeler
+          npm install
+
+      - name: Run PR auto labeler
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO_OWNER: team-mirai
+          REPO_NAME: random
+        run: |
+          cd random/pr-auto-labeler
+          npx ts-node src/index.ts

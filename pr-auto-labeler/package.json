@@ -1,0 +1,21 @@
+{
+  "name": "pr-auto-labeler",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "ts-node src/index.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "PR自動ラベル付けツール",
+  "dependencies": {
+    "@octokit/rest": "^22.0.0",
+    "@types/node": "^22.15.23",
+    "dotenv": "^16.5.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
+  }
+}
