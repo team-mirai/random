@@ -1,4 +1,4 @@
-export const fileLabelMappings = [
+const fileLabelMappings = [
   {
     pattern: '.md',
     label: 'documentation'
@@ -36,3 +36,5 @@ export const fileLabelMappings = [
     label: 'refactoring'
   }
 ];
+
+export { fileLabelMappings };
