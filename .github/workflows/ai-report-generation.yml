@@ -82,6 +82,10 @@ jobs:
           cd random
           git config user.name "GitHub Actions Bot"
           git config user.email "actions@github.com"
+          
+          # Pull latest changes to avoid conflicts
+          git pull origin main
+          
           git add pr_analysis_results/ai_reports/ pr_analysis_results/ai_label_reports/
 
           # 変更がある場合のみコミットする
