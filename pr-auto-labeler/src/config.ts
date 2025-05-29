@@ -1,38 +1,54 @@
 export const fileLabelMappings = [
   {
-    pattern: '.md',
-    label: 'documentation'
+    pattern: '教育',
+    label: '教育'
+  },
+  {
+    pattern: '行政改革',
+    label: '行政改革'
+  },
+  {
+    pattern: '経済財政',
+    label: '経済財政'
+  },
+  {
+    pattern: '科学技術',
+    label: '科学技術'
+  },
+  {
+    pattern: '産業',
+    label: '産業政策'
+  },
+  {
+    pattern: 'デジタル民主主義',
+    label: 'デジタル民主主義'
+  },
+  {
+    pattern: '子育て',
+    label: '子育て'
+  },
+  {
+    pattern: 'エネルギー',
+    label: 'エネルギー'
+  },
+  {
+    pattern: '医療',
+    label: '医療'
+  },
+  {
+    pattern: 'その他',
+    label: 'その他政策'
   },
   {
     pattern: 'README',
-    label: 'documentation'
+    label: 'README'
   },
   {
-    pattern: 'CONTRIBUTING',
-    label: 'documentation'
+    pattern: 'ビジョン',
+    label: 'ビジョン'
   },
   {
-    pattern: 'algorithm',
-    label: 'Algorithm'
-  },
-  {
-    pattern: 'pr_analysis',
-    label: 'Algorithm'
-  },
-  {
-    pattern: '.github/workflows',
-    label: 'enhancement'
-  },
-  {
-    pattern: 'test',
-    label: 'bug'
-  },
-  {
-    pattern: 'fix',
-    label: 'bug'
-  },
-  {
-    pattern: 'refactor',
-    label: 'refactoring'
+    pattern: '.github',
+    label: '[システム]'
   }
 ];
