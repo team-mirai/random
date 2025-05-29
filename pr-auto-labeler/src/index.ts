@@ -1,6 +1,6 @@
 import { Octokit } from '@octokit/rest';
 import dotenv from 'dotenv';
-import { fileLabelMappings } from './config.js';
+import fileLabelMappings from './config.js';
 import { PullRequest, FileChange } from './types.js';
 
 dotenv.config();

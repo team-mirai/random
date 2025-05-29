@@ -37,4 +37,5 @@ const fileLabelMappings = [
   }
 ];
 
+export default fileLabelMappings;
 export { fileLabelMappings };
