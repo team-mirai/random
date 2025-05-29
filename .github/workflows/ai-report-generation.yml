@@ -6,7 +6,7 @@ on:
       sample_size:
         description: 'Number of PRs to sample for classification (0 = all)'
         required: false
-        default: '0'
+        default: '109'
       confidence_threshold:
         description: 'Confidence threshold for classification (0.0-1.0)'
         required: false
@@ -73,7 +73,7 @@ jobs:
             --input pr_analysis_results/merged/merged_prs_data.json \
             --output-dir pr_analysis_results/ai_label_reports \
             --classify-unlabeled \
-            --sample ${{ github.event.inputs.sample_size || '0' }} \
+            --sample ${{ github.event.inputs.sample_size || '109' }} \
             --confidence-threshold ${{ github.event.inputs.confidence_threshold || '0.7' }}
           echo "Label-based AI classification reports generated"
 
@@ -82,6 +82,10 @@ jobs:
           cd random
           git config user.name "GitHub Actions Bot"
           git config user.email "actions@github.com"
+          
+          # Pull latest changes to avoid conflicts
+          git pull origin main
+          
           git add pr_analysis_results/ai_reports/ pr_analysis_results/ai_label_reports/
 
           # 変更がある場合のみコミットする
