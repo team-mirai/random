@@ -50,5 +50,13 @@ export const fileLabelMappings = [
   {
     pattern: '.github',
     label: '[システム]'
+  },
+  {
+    pattern: 'duplicate',
+    label: '[重複]'
+  },
+  {
+    pattern: 'thank',
+    label: 'thankyou'
   }
 ];
