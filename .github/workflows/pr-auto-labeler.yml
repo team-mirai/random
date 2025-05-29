@@ -42,7 +42,7 @@ jobs:
 
       - name: Run PR auto labeler
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
           REPO_OWNER: team-mirai
           REPO_NAME: policy
         run: |
