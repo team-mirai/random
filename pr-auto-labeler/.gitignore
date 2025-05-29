@@ -1,0 +1,12 @@
+# Compiled output
+dist/
+*.js
+*.js.map
+*.d.ts
+tsconfig.tsbuildinfo
+
+# Environment variables
+.env
+
+# Dependencies
+node_modules/
