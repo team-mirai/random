@@ -34,6 +34,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO_OWNER: team-mirai
           REPO_NAME: random
+          NODE_OPTIONS: "--loader ts-node/esm"
         run: |
           cd random/pr-auto-labeler
-          npx ts-node --esm src/index.ts
+          node src/index.ts
