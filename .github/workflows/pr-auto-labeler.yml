@@ -29,12 +29,16 @@ jobs:
           cd random/pr-auto-labeler
           npm install
 
+      - name: Build TypeScript
+        run: |
+          cd random/pr-auto-labeler
+          npx tsc -p tsconfig.json
+
       - name: Run PR auto labeler
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO_OWNER: team-mirai
           REPO_NAME: random
-          NODE_OPTIONS: "--loader ts-node/esm"
         run: |
           cd random/pr-auto-labeler
-          node src/index.ts
+          node dist/index.js
