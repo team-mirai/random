@@ -2,8 +2,8 @@ name: PR Auto Labeler
 
 on:
   schedule:
-    # 毎日午前0時に実行（UTC時間）
-    - cron: "0 0 * * *"
+    # 毎日午前0時に実行（日本時間）
+    - cron: "0 15 * * *"
   workflow_dispatch: # 手動実行も可能にする
 
 # 必要な権限を追加
